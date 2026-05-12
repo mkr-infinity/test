@@ -1,8 +1,7 @@
-node_modules/
+*.apk
+.gradle/
+.gradle/
 build/
-dist/
-coverage/
-.DS_Store
+local.properties
+*.class
 *.log
-.env*
-!.env.example
