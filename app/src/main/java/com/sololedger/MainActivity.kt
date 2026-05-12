@@ -4,12 +4,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import com.sololedger.ui.theme.SoloLedgerTheme
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstance: Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { SoloLedgerTheme { SoloApp() } }
+        setContent {
+            SoloLedgerTheme(aesthetic = com.sololedger.ui.theme.AESTHETICS[0]) {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    SoloApp()
+                }
+            }
+        }
     }
 }

@@ -1,654 +1,1147 @@
 package com.sololedger
 
 import android.app.DatePickerDialog
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.foundation.shape.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.*
-import androidx.core.text.toInputStream
-import androidx.room.Room
-import com.sololedger.data.*
-import kotlinx.coroutines.flow.first
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.sololedger.data.LedgerEntry
+import com.sololedger.data.PrefStore
+import com.sololedger.data.Repo
+import com.sololedger.ui.theme.AESTHETICS
 import java.text.SimpleDateFormat
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.*
 
-private val dFmt = DateTimeFormatter.ofPattern("dd MMM yyyy")
-
-enum class EntryKind { INCOME, EXPENSE }
-
-enum class NavTab { Home, History, Reports, Settings, Profile }
-
-private data class NavState(
-    val tab: NavTab = NavTab.Home,
-    val entryForEdit: LedgerEntry? = null,
-    val showEntrySheet: Boolean = false,
-    val showDeleteDialog: Boolean = false,
-    val deleteTarget: LedgerEntry? = null
+private val CURRENCIES = listOf(
+    "₹" to "Indian Rupee", "$" to "US Dollar", "€" to "Euro", "£" to "British Pound",
+    "¥" to "Japanese Yen", "₿" to "Bitcoin", "kr" to "Swedish Krona", "₩" to "Korean Won",
+    "₽" to "Russian Ruble", "R$" to "Brazilian Real", "A$" to "Australian Dollar",
+    "C$" to "Canadian Dollar", "CHF" to "Swiss Franc"
 )
 
-@Composable fun SoloApp() {
-    val ctx = LocalContext.current
-    val prefs = remember { PrefStore(ctx) }
-    val aestheticIdx by prefs.aestheticIdx.collectAsState(initial = 0)
-    val darkTheme = prefs.darkTheme.collectAsState(initial = false).value
-
-    val aes = when {
-        darkTheme -> DarkPalette
-        else -> AESTHETICS.getOrNull(aestheticIdx) ?: AESTHETICS[0]
-    }
-
-    LaunchedEffect(Unit) { prefs.seedDefaultCategories() }
-    val repo = remember { SoloRepository(Room.databaseBuilder(ctx, AppDatabase::class.java, "solo_ledger").build()) }
-
-    val allEntries by repo.getAll().collectAsState(initial = emptyList())
-    val categories by repo.getAllCategories().collectAsState(initial = emptyList())
-
-    var nav by remember { mutableStateOf(NavState()) }
-    val entrySheetDraft = remember { mutableStateOf(EntryDraft()) }
-    var filterType by remember { mutableStateOf<EntryKind?>(null) }
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedPeriod by remember { mutableIntStateOf(0) }
-
-    Surface(modifier = Modifier.fillMaxSize(), color = aes.background) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1f)) {
-                when (nav.tab) {
-                    NavTab.Home -> HomeScreen(
-                        entries = allEntries, categories = categories, filterType = filterType,
-                        searchQuery = searchQuery, selectedPeriod = selectedPeriod,
-                        aes = aes, prefs = prefs, repo = repo,
-                        onFilter = { filterType = it },
-                        onSearch = { searchQuery = it },
-                        onPeriod = { selectedPeriod = it },
-                        onEditEntry = { e ->
-                            entrySheetDraft.value = EntryDraft(
-                                title = e.title, notes = e.notes, amountStr = (e.amountMinor / 100.0).toString(),
-                                kind = e.kind, category = e.category, color = e.color, icon = e.icon, dateMs = e.dateMs, editingId = e.id
-                            )
-                            nav = nav.copy(showEntrySheet = true, entryForEdit = e)
-                        },
-                        onDeleteEntry = { nav = nav.copy(showDeleteDialog = true, deleteTarget = it) }
-                    )
-                    NavTab.History -> HistoryScreen(
-                        entries = allEntries, categories = categories, aes = aes, prefs = prefs,
-                        onEdit = { e ->
-                            entrySheetDraft.value = EntryDraft(
-                                title = e.title, notes = e.notes, amountStr = (e.amountMinor / 100.0).toString(),
-                                kind = e.kind, category = e.category, color = e.color, icon = e.icon, dateMs = e.dateMs, editingId = e.id
-                            )
-                            nav = nav.copy(showEntrySheet = true, entryForEdit = e)
-                        },
-                        onDelete = { nav = nav.copy(showDeleteDialog = true, deleteTarget = it) }
-                    )
-                    NavTab.Reports -> ReportsScreen(
-                        entries = allEntries, categories = categories, aes = aes, prefs = prefs,
-                        selectedPeriod = selectedPeriod, onPeriodChange = { selectedPeriod = it }
-                    )
-                    NavTab.Settings -> SettingsScreen(
-                        aes = aes, prefs = prefs, repo = repo, categories = categories,
-                        onOpenProfile = { nav = nav.copy(tab = NavTab.Profile) }
-                    )
-                    NavTab.Profile -> ProfileEditScreen(
-                        aes = aes, prefs = prefs,
-                        onBack = { nav = nav.copy(tab = NavTab.Settings) }
-                    )
-                }
-            }
-            AnimatedBottomNav(
-                selected = nav.tab, accent = aes.accent, surface = aes.surface,
-                text = aes.text, muted = aes.text.copy(alpha = 0.5f),
-                onSelect = { nav = nav.copy(tab = it, showEntrySheet = false) }
-            )
-        }
-
-        if (nav.showEntrySheet) {
-            EntrySheet(
-                draft = entrySheetDraft.value,
-                categories = categories,
-                aes = aes,
-                onChange = { entrySheetDraft.value = it },
-                onSave = { draft ->
-                    val minor = (draft.amountStr.toDoubleOrNull() ?: 0.0).times(100).toInt()
-                    val e = LedgerEntry(
-                        id = draft.editingId ?: UUID.randomUUID().toString(),
-                        kind = draft.kind, title = draft.title.ifBlank { "Entry" },
-                        notes = draft.notes, amountMinor = minor,
-                        category = draft.category.ifBlank { "General" },
-                        color = draft.color, icon = draft.icon.ifBlank { "payments" },
-                        dateMs = draft.dateMs, createdAt = System.currentTimeMillis()
-                    )
-                    kotlinx.coroutines.run { if (draft.editingId != null) repo.update(e) else repo.insert(e) }
-                    entrySheetDraft.value = EntryDraft()
-                    nav = nav.copy(showEntrySheet = false, entryForEdit = null)
-                },
-                onDismiss = {
-                    entrySheetDraft.value = EntryDraft()
-                    nav = nav.copy(showEntrySheet = false, entryForEdit = null)
-                }
-            )
-        }
-
-        if (nav.showDeleteDialog && nav.deleteTarget != null) {
-            DeleteDialog(
-                entry = nav.deleteTarget!!, aes = aes,
-                onConfirm = {
-                    kotlinx.coroutines.run { repo.delete(nav.deleteTarget!!.id) }
-                    nav = nav.copy(showDeleteDialog = false, deleteTarget = null)
-                },
-                onDismiss = { nav = nav.copy(showDeleteDialog = false, deleteTarget = null) }
-            )
-        }
-    }
-}
-
-private data class EntryDraft(
-    val title: String = "", val notes: String = "", val amountStr: String = "",
-    val kind: EntryKind = EntryKind.EXPENSE, val category: String = "General",
-    val color: Long = 0xFFE8537AL, val icon: String = "payments",
-    val dateMs: Long = System.currentTimeMillis(), val editingId: String? = null
+private val CATEGORIES = listOf(
+    "Food", "Transport", "Shopping", "Entertainment", "Bills", "Health",
+    "Travel", "Education", "Salary", "Freelance", "Investment", "Gift", "Other"
 )
-
-@Composable private fun HomeScreen(
-    entries: List<LedgerEntry>, categories: List<Category>, filterType: EntryKind?, searchQuery: String,
-    selectedPeriod: Int, aes: Aesthetic, prefs: PrefStore, repo: SoloRepository,
-    onFilter: (EntryKind?) -> Unit, onSearch: (String) -> Unit, onPeriod: (Int) -> Unit,
-    onEditEntry: (LedgerEntry) -> Unit, onDeleteEntry: (LedgerEntry) -> Unit
-) {
-    val showTitle by prefs.showTitle.collectAsState(initial = true)
-    val showCategory by prefs.showCategory.collectAsState(initial = true)
-    val showNotes by prefs.showNotes.collectAsState(initial = true)
-    val showDate by prefs.showDate.collectAsState(initial = true)
-    val sym by prefs.currencySymbol.collectAsState(initial = "INR")
-
-    val filtered = remember(entries, filterType, searchQuery, selectedPeriod) {
-        entries.filter { e ->
-            val okType = filterType == null || e.kind == filterType
-            val okSearch = searchQuery.isBlank() || e.title.contains(searchQuery, true) || e.notes.contains(searchQuery, true)
-            val okPeriod = when (selectedPeriod) {
-                0 -> true
-                1 -> e.dateMs > System.currentTimeMillis() - 7 * 86400000L
-                2 -> e.dateMs > System.currentTimeMillis() - 90 * 86400000L
-                else -> true
-            }
-            okType && okSearch && okPeriod
-        }
-    }
-
-    val income = entries.filter { it.kind == EntryKind.INCOME }.sumOf { it.amountMinor }
-    val expense = entries.filter { it.kind == EntryKind.EXPENSE }.sumOf { it.amountMinor }
-    val net = income - expense
-
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        TopHeader(sym = sym, income = income, expense = expense, net = net, aes = aes, prefs = prefs)
-        FilterBar(selected = filterType, accent = aes.accent, onSelect = onFilter)
-        PeriodSelector(selected = selectedPeriod, accent = aes.accent, muted = aes.text.copy(alpha = 0.4f), onPeriod = onPeriod)
-        SearchBar(query = searchQuery, accent = aes.accent, placeholder = aes.text.copy(alpha = 0.4f), onQuery = onSearch)
-
-        val grouped = filtered.groupBy { LocalDate.ofEpochDay(it.dateMs / 86400000L) }
-        grouped.entries.sortedByDescending { it.key }.forEach { (day, items) ->
-            DateSection(
-                date = day, entries = items, categories = categories, aes = aes,
-                showTitle = showTitle, showCategory = showCategory, showNotes = showNotes, showDate = showDate,
-                onEdit = onEditEntry, onDelete = onDeleteEntry, sym = sym
-            )
-        }
-        if (filtered.isEmpty()) EmptyState(text = aes.text.copy(alpha = 0.4f), label = "No entries yet")
-        BottomPadding()
-    }
-}
-
-@Composable private fun TopHeader(sym: String, income: Int, expense: Int, net: Int, aes: Aesthetic, prefs: PrefStore) {
-    val p by prefs.name.collectAsState(initial = "")
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
-        Column {
-            Text("Solo Ledger", style = TextStyle(color = aes.text, fontSize = 22.sp, fontWeight = FontWeight.Bold))
-            Text(p.ifBlank { "Welcome back" }, style = TextStyle(color = aes.text.copy(alpha = 0.5f), fontSize = 13.sp))
-        }
-        val now = LocalDate.now()
-        Text(now.format(dFmt), style = TextStyle(color = aes.text.copy(alpha = 0.4f), fontSize = 12.sp), modifier = Modifier.align(Alignment.TopEnd))
-    }
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        StatCard(label = "Income", amount = income, sym = sym, accent = aes.accent, bg = aes.surfaceVariant, fg = aes.text, isPositive = true)
-        StatCard(label = "Expense", amount = expense, sym = sym, accent = Color(0xFFE8537A), bg = aes.surfaceVariant, fg = aes.text, isPositive = false)
-        StatCard(label = "Balance", amount = net, sym = sym, accent = aes.accent, bg = aes.accent.copy(alpha = 0.12f), fg = if (net >= 0) aes.accent else Color(0xFFE8537A), isPositive = net >= 0)
-    }
-    Spacer(modifier = Modifier.height(12.dp))
-}
-
-@Composable private fun StatCard(label: String, amount: Int, sym: String, accent: Color, bg: Color, fg: Color, isPositive: Boolean) {
-    Column(modifier = Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(bg).padding(14.dp)) {
-        Text(label, style = TextStyle(color = fg.copy(alpha = 0.6f), fontSize = 11.sp))
-        Text("$sym ${String.format("%.2f", amount / 100.0)}", style = TextStyle(color = if (label == "Expense") Color(0xFFE8537A) else fg, fontSize = 15.sp, fontWeight = FontWeight.Bold))
-    }
-}
-
-@Composable private fun FilterBar(selected: EntryKind?, accent: Color, onSelect: (EntryKind?) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(label = "All", selected = selected == null, accent = accent, onClick = { onSelect(null) })
-        FilterChip(label = "Income", selected = selected == EntryKind.INCOME, accent = accent, onClick = { onSelect(EntryKind.INCOME) })
-        FilterChip(label = "Expense", selected = selected == EntryKind.EXPENSE, accent = accent, onClick = { onSelect(EntryKind.EXPENSE) })
-    }
-}
-
-@Composable private fun FilterChip(label: String, selected: Boolean, accent: Color, onClick: () -> Unit) {
-    val bg = if (selected) accent else Color.Unspecified
-    val fg = if (selected) Color.White else Color.Gray
-    Surface(onClick = onClick, shape = RoundedCornerShape(20.dp), color = bg, modifier = Modifier.height(34.dp)) {
-        Text(label, style = TextStyle(color = fg, fontSize = 12.sp, fontWeight = FontWeight.Medium), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-    }
-}
-
-@Composable private fun PeriodSelector(selected: Int, accent: Color, muted: Color, onPeriod: (Int) -> Unit) {
-    val periods = listOf("All", "7D", "3M", "1Y")
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        periods.forEachIndexed { i, label ->
-            val sel = selected == i
-            Surface(onClick = { onPeriod(i) }, shape = RoundedCornerShape(16.dp), color = if (sel) accent.copy(alpha = 0.15f) else Color.Transparent, modifier = Modifier.height(30.dp).weight(1f)) {
-                Text(label, style = TextStyle(color = if (sel) accent else muted, fontSize = 11.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal), textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 5.dp))
-            }
-        }
-    }
-}
-
-@Composable private fun SearchBar(query: String, accent: Color, placeholder: Color, onQuery: (String) -> Unit) {
-    OutlinedTextField(value = query, onValueChange = onQuery, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), placeholder = { Text("Search entries...", color = placeholder) }, leadingIcon = { Icon(Icons.Default.Search, null, tint = placeholder) }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = accent, unfocusedBorderColor = Color.Transparent, focusedContainerColor = accent.copy(alpha = 0.06f), unfocusedContainerColor = accent.copy(alpha = 0.04f)), shape = RoundedCornerShape(16.dp))
-}
-
-@Composable private fun DateSection(date: LocalDate, entries: List<LedgerEntry>, categories: List<Category>, aes: Aesthetic, showTitle: Boolean, showCategory: Boolean, showNotes: Boolean, showDate: Boolean, onEdit: (LedgerEntry) -> Unit, onDelete: (LedgerEntry) -> Unit, sym: String) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-        Text(date.format(dFmt), style = TextStyle(color = aes.text.copy(alpha = 0.45f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(vertical = 8.dp))
-        entries.forEach { e ->
-            val cat = categories.find { it.name == e.category }
-            EntryRowCard(entry = e, category = cat, aes = aes, showTitle = showTitle, showCategory = showCategory, showNotes = showNotes, showDate = showDate, onEdit = onEdit, onDelete = onDelete, sym = sym)
-        }
-    }
-}
-
-@Composable private fun EntryRowCard(entry: LedgerEntry, category: Category?, aes: Aesthetic, showTitle: Boolean, showCategory: Boolean, showNotes: Boolean, showDate: Boolean, onEdit: (LedgerEntry) -> Unit, onDelete: (LedgerEntry) -> Unit, sym: String) {
-    val isExpense = entry.kind == EntryKind.EXPENSE
-    val amtColor = if (isExpense) Color(0xFFE8537A) else aes.accent
-
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onEdit(entry) }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = aes.surfaceVariant.copy(alpha = 0.5f)) ) {
-        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            GlassCircle(icon = entry.icon, color = Color(entry.color), size = 44.dp)
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                if (showTitle && entry.title.isNotBlank()) Text(entry.title, style = TextStyle(color = aes.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
-                if (showCategory && entry.category.isNotBlank()) Text(entry.category, style = TextStyle(color = aes.text.copy(alpha = 0.5f), fontSize = 11.sp))
-                if (showNotes && entry.notes.isNotBlank()) Text(entry.notes, style = TextStyle(color = aes.text.copy(alpha = 0.35f), fontSize = 10.sp), maxLines = 1)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text("${if (isExpense) "-" else "+"}$sym ${String.format("%.2f", entry.amountMinor / 100.0)}", style = TextStyle(color = amtColor, fontSize = 15.sp, fontWeight = FontWeight.Bold))
-                if (showDate) Text(LocalDate.ofEpochDay(entry.dateMs / 86400000L).format(DateTimeFormatter.ofPattern("dd MMM")), style = TextStyle(color = aes.text.copy(alpha = 0.35f), fontSize = 10.sp))
-            }
-            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Delete, "Delete", tint = aes.text.copy(alpha = 0.3f), modifier = Modifier.size(16.dp))
-            }
-        }
-    }
-}
-
-@Composable private fun EmptyState(text: Color, label: String) {
-    Box(modifier = Modifier.fillMaxWidth().padding(60.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.AccountBalanceWallet, null, tint = text, modifier = Modifier.size(56.dp))
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(label, style = TextStyle(color = text, fontSize = 15.sp))
-        }
-    }
-}
-
-@Composable private fun HistoryScreen(entries: List<LedgerEntry>, categories: List<Category>, aes: Aesthetic, prefs: PrefStore, onEdit: (LedgerEntry) -> Unit, onDelete: (LedgerEntry) -> Unit) {
-    val showTitle by prefs.showTitle.collectAsState(initial = true)
-    val showCategory by prefs.showCategory.collectAsState(initial = true)
-    val sym by prefs.currencySymbol.collectAsState(initial = "INR")
-
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        SectionHeader("History", aes.text)
-        if (entries.isEmpty()) EmptyState(text = aes.text.copy(alpha = 0.4f), label = "No entries yet")
-        val grouped = entries.groupBy { LocalDate.ofEpochDay(it.dateMs / 86400000L) }
-        grouped.entries.sortedByDescending { it.key }.forEach { (day, items) ->
-            Text(day.format(dFmt), style = TextStyle(color = aes.text.copy(alpha = 0.45f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-            items.forEach { e ->
-                val cat = categories.find { it.name == e.category }
-                val isExpense = e.kind == EntryKind.EXPENSE
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable { onEdit(e) }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = aes.surfaceVariant.copy(alpha = 0.5f))) {
-                    Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        GlassCircle(icon = e.icon, color = Color(e.color), size = 40.dp)
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            if (showTitle && e.title.isNotBlank()) Text(e.title, style = TextStyle(color = aes.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
-                            if (showCategory && e.category.isNotBlank()) Text(e.category, style = TextStyle(color = aes.text.copy(alpha = 0.5f), fontSize = 11.sp))
-                        }
-                        Text("${if (isExpense) "-" else "+"}$sym ${String.format("%.2f", e.amountMinor / 100.0)}", style = TextStyle(color = if (isExpense) Color(0xFFE8537A) else aes.accent, fontSize = 15.sp, fontWeight = FontWeight.Bold))
-                        IconButton(onClick = { onDelete(e) }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Delete, "Delete", tint = aes.text.copy(alpha = 0.3f), modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-            }
-        }
-        BottomPadding()
-    }
-}
-
-@Composable private fun ReportsScreen(entries: List<LedgerEntry>, categories: List<Category>, aes: Aesthetic, prefs: PrefStore, selectedPeriod: Int, onPeriodChange: (Int) -> Unit) {
-    val sym by prefs.currencySymbol.collectAsState(initial = "INR")
-
-    val filtered = remember(entries, selectedPeriod) {
-        when (selectedPeriod) {
-            0 -> entries
-            1 -> entries.filter { it.dateMs > System.currentTimeMillis() - 7 * 86400000L }
-            2 -> entries.filter { it.dateMs > System.currentTimeMillis() - 90 * 86400000L }
-            3 -> entries.filter { it.dateMs > System.currentTimeMillis() - 365 * 86400000L }
-            else -> entries
-        }
-    }
-
-    val income = filtered.filter { it.kind == EntryKind.INCOME }.sumOf { it.amountMinor }
-    val expense = filtered.filter { it.kind == EntryKind.EXPENSE }.sumOf { it.amountMinor }
-    val net = income - expense
-    val catMap = filtered.groupBy { it.category }.mapValues { it.value.sumOf { e -> e.amountMinor } }
-
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        SectionHeader("Reports", aes.text)
-        PeriodSelector(selected = selectedPeriod, accent = aes.accent, muted = aes.text.copy(alpha = 0.4f), onPeriod = onPeriodChange)
-
-        Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = aes.accent.copy(alpha = 0.1f))) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text("Net Balance", style = TextStyle(color = aes.text.copy(alpha = 0.6f), fontSize = 12.sp))
-                Text("$sym ${String.format("%.2f", net / 100.0)}", style = TextStyle(color = if (net >= 0) aes.accent else Color(0xFFE8537A), fontSize = 32.sp, fontWeight = FontWeight.Bold))
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column {
-                        Text("Income", style = TextStyle(color = aes.text.copy(alpha = 0.5f), fontSize = 11.sp))
-                        Text("$sym ${String.format("%.2f", income / 100.0)}", style = TextStyle(color = aes.accent, fontSize = 16.sp, fontWeight = FontWeight.Bold))
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("Expense", style = TextStyle(color = aes.text.copy(alpha = 0.5f), fontSize = 11.sp))
-                        Text("$sym ${String.format("%.2f", expense / 100.0)}", style = TextStyle(color = Color(0xFFE8537A), fontSize = 16.sp, fontWeight = FontWeight.Bold))
-                    }
-                }
-            }
-        }
-
-        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = aes.surfaceVariant.copy(alpha = 0.5f))) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("By Category", style = TextStyle(color = aes.text, fontSize = 15.sp, fontWeight = FontWeight.Bold))
-                Spacer(modifier = Modifier.height(12.dp))
-                catMap.entries.sortedByDescending { it.value }.forEach { (cat, total) ->
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(cat, style = TextStyle(color = aes.text, fontSize = 13.sp), modifier = Modifier.weight(1f))
-                        Text("$sym ${String.format("%.2f", total / 100.0)}", style = TextStyle(color = aes.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-                    }
-                }
-                if (catMap.isEmpty()) Text("No data for this period", style = TextStyle(color = aes.text.copy(alpha = 0.4f), fontSize = 13.sp))
-            }
-        }
-        BottomPadding()
-    }
-}
-
-@Composable private fun SettingsScreen(aes: Aesthetic, prefs: PrefStore, repo: SoloRepository, categories: List<Category>, onOpenProfile: () -> Unit) {
-    val darkTheme by prefs.darkTheme.collectAsState(initial = false)
-    val showTitle by prefs.showTitle.collectAsState(initial = true)
-    val showCategory by prefs.showCategory.collectAsState(initial = true)
-    val showNotes by prefs.showNotes.collectAsState(initial = true)
-    val showDate by prefs.showDate.collectAsState(initial = true)
-    val name by prefs.name.collectAsState(initial = "")
-
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        SectionHeader("Settings", aes.text)
-        Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = aes.surfaceVariant.copy(alpha = 0.5f))) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Display", style = TextStyle(color = aes.text, fontSize = 15.sp, fontWeight = FontWeight.Bold))
-                Spacer(modifier = Modifier.height(10.dp))
-                ToggleRow(label = "Show Title", checked = showTitle, accent = aes.accent, muted = aes.text.copy(alpha = 0.5f)) { prefs.setShowTitle(it) }
-                ToggleRow(label = "Show Category", checked = showCategory, accent = aes.accent, muted = aes.text.copy(alpha = 0.5f)) { prefs.setShowCategory(it) }
-                ToggleRow(label = "Show Notes", checked = showNotes, accent = aes.accent, muted = aes.text.copy(alpha = 0.5f)) { prefs.setShowNotes(it) }
-                ToggleRow(label = "Show Date", checked = showDate, accent = aes.accent, muted = aes.text.copy(alpha = 0.5f)) { prefs.setShowDate(it) }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = aes.text.copy(alpha = 0.08f))
-                ToggleRow(label = "Dark Theme", checked = darkTheme, accent = aes.accent, muted = aes.text.copy(alpha = 0.5f)) { prefs.setDarkTheme(it) }
-            }
-        }
-        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = aes.surfaceVariant.copy(alpha = 0.5f))) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Profile", style = TextStyle(color = aes.text, fontSize = 15.sp, fontWeight = FontWeight.Bold))
-                Spacer(modifier = Modifier.height(10.dp))
-                OptionRow(icon = Icons.Default.Person, label = "Edit Profile", accent = aes.accent, text = aes.text) { onOpenProfile() }
-            }
-        }
-        BottomPadding()
-    }
-}
-
-@Composable private fun ProfileEditScreen(aes: Aesthetic, prefs: PrefStore, onBack: () -> Unit) {
-    var name by remember { mutableStateOf(prefs.name.collectAsState(initial = "").value) }
-    var sym by remember { mutableStateOf(prefs.currencySymbol.collectAsState(initial = "INR").value) }
-    val showPicker by remember { mutableStateOf(false) }
-
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = aes.text) }
-            Text("Edit Profile", style = TextStyle(color = aes.text, fontSize = 18.sp, fontWeight = FontWeight.Bold))
-        }
-
-        Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = aes.surfaceVariant.copy(alpha = 0.5f))) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text("Your Name", style = TextStyle(color = aes.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-                OutlinedTextField(value = name, onValueChange = {
-                    name = it; kotlinx.coroutines.run { prefs.setName(it) }
-                }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = aes.accent, unfocusedBorderColor = Color.Transparent), shape = RoundedCornerShape(14.dp))
-
-                Spacer(modifier = Modifier.height(20.dp))
-                Text("Currency Symbol", style = TextStyle(color = aes.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-                Spacer(modifier = Modifier.height(8.dp))
-                CurrencyPicker(selected = sym, accent = aes.accent, surface = aes.surfaceVariant, text = aes.text, muted = aes.text.copy(alpha = 0.5f)) { newSym ->
-                    sym = newSym; kotlinx.coroutines.run { prefs.setCurrencySymbol(newSym) }
-                }
-            }
-        }
-
-        SupportSection(aes = aes)
-        BottomPadding()
-    }
-}
-
-@Composable private fun SupportSection(aes: Aesthetic) {
-    Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = aes.accent.copy(alpha = 0.08f))) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
-                Icon(Icons.Default.Favorite, null, tint = aes.accent, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Support the Developer", style = TextStyle(color = aes.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))
-            }
-            Text("If Solo Ledger adds value to your life, consider a small support. Every contribution fuels more features and improvements.", style = TextStyle(color = aes.text.copy(alpha = 0.6f), fontSize = 12.sp), modifier = Modifier.padding(bottom = 16.dp))
-            SUPPORT_LINKS.forEach { (label, url, icon) ->
-                SupportLinkRow(label = label, url = url, icon = icon, accent = aes.accent, text = aes.text)
-            }
-        }
-    }
-}
 
 private val SUPPORT_LINKS = listOf(
-    Triple("Buy Me a Coffee", "https://www.buymeacoffee.com/mkr_in", Icons.Default.LocalCafe),
-    Triple("Patreon", "https://www.patreon.com/mkrinfinity", Icons.Default.CardMembership),
-    Triple("Ko-fi", "https://ko-fi.com/mkrinfinity", Icons.Default.Coffee)
+    "Buy Me a Coffee" to "https://buymeacoffee.com/mkr-infinity",
+    "Patreon" to "https://patreon.com/mkr_infinity"
 )
 
-@Composable private fun SupportLinkRow(label: String, url: String, icon: ImageVector, accent: Color, text: Color) {
+private val SUPPORT_QUOTES = listOf(
+    "Your support keeps this app free forever.",
+    "Made with care. Every contribution matters.",
+    "Thank you for believing in this project.",
+    "Fuel the mission — one coffee at a time."
+)
+
+private const val STAGE_HOME = 0
+private const val STAGE_SEARCH = 1
+private const val STAGE_EDIT = 2
+private const val STAGE_SETTINGS = 3
+private const val STAGE_PROFILE = 4
+private const val STAGE_BIN = 5
+
+@Composable
+fun SoloApp() {
     val ctx = LocalContext.current
-    Surface(onClick = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp), shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = 0.1f)) {
-        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(label, style = TextStyle(color = text, fontSize = 14.sp, fontWeight = FontWeight.Medium), modifier = Modifier.weight(1f))
-            Icon(Icons.Default.OpenInNew, null, tint = text.copy(alpha = 0.4f), modifier = Modifier.size(16.dp))
+    val prefStore = remember { PrefStore(ctx) }
+    LaunchedEffect(Unit) { Repo.init(ctx) }
+
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var stage by remember { mutableIntStateOf(STAGE_HOME) }
+    var showEntrySheet by remember { mutableStateOf(false) }
+    var editingEntryId by remember { mutableLongStateOf(-1L) }
+    var searchQuery by remember { mutableStateOf("") }
+    var filterType by remember { mutableIntStateOf(-1) }
+    var entriesSnapshot by remember { mutableStateOf(emptyList<LedgerEntry>()) }
+    var deletedSnapshot by remember { mutableStateOf(emptyList<LedgerEntry>()) }
+    var aesthetic by remember {
+        mutableStateOf(AESTHETICS.getOrElse(prefStore.aestheticIdx.coerceIn(0, AESTHETICS.lastIndex)) { AESTHETICS[0] })
+    }
+    var currencySymbol by remember { mutableStateOf(prefStore.currencySymbol.takeIf { it.isNotBlank() } ?: "₹") }
+
+    LaunchedEffect(stage) {
+        when (stage) {
+            STAGE_HOME, STAGE_SEARCH -> {
+                entriesSnapshot = Repo.entries()
+                deletedSnapshot = Repo.deletedEntries()
+            }
+            STAGE_BIN -> { deletedSnapshot = Repo.deletedEntries() }
+            else -> {}
+        }
+    }
+
+    val accent = aesthetic.accent
+    val bg = aesthetic.surface
+    val card = aesthetic.card
+    val text = aesthetic.foreground
+    val muted = aesthetic.muted
+    val surfaceAlt = aesthetic.surfaceAlt
+    val isDark = aesthetic.isDark
+
+    Box(modifier = Modifier.fillMaxSize().background(bg)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            if (isDark) Color(0xFF0D0D1A) else Color(0xFFF5F5F5),
+                            bg
+                        )
+                    )
+                )
+        )
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            when (stage) {
+                STAGE_HOME -> HomeScreen(
+                    entries = entriesSnapshot,
+                    searchQuery = searchQuery,
+                    filterType = filterType,
+                    sym = currencySymbol,
+                    aesthetic = aesthetic,
+                    onAdd = { showEntrySheet = true },
+                    onSearch = { stage = STAGE_SEARCH },
+                    onSettings = { stage = STAGE_SETTINGS },
+                    onEditEntry = { id -> editingEntryId = id; stage = STAGE_EDIT },
+                    onDeleteEntry = { id ->
+                        Repo.deleteEntry(id)
+                        entriesSnapshot = entriesSnapshot.filter { it.id != id }
+                    },
+                    onBin = { stage = STAGE_BIN },
+                    onProfile = { stage = STAGE_PROFILE },
+                    onFilterChange = { filterType = it }
+                )
+                STAGE_SEARCH -> SearchScreen(
+                    entries = entriesSnapshot,
+                    searchQuery = searchQuery,
+                    filterType = filterType,
+                    sym = currencySymbol,
+                    aesthetic = aesthetic,
+                    onQueryChange = { searchQuery = it },
+                    onEditEntry = { id -> editingEntryId = id; stage = STAGE_EDIT },
+                    onDeleteEntry = { id ->
+                        Repo.deleteEntry(id)
+                        entriesSnapshot = entriesSnapshot.filter { it.id != id }
+                    },
+                    onFilterChange = { filterType = it },
+                    onBack = { stage = STAGE_HOME }
+                )
+                STAGE_EDIT -> EntryEditorScreen(
+                    entryId = editingEntryId,
+                    sym = currencySymbol,
+                    aesthetic = aesthetic,
+                    onDismiss = { editingEntryId = -1L; stage = STAGE_HOME },
+                    onSaved = { editingEntryId = -1L; stage = STAGE_HOME },
+                    onSymChange = { v -> currencySymbol = v; prefStore.currencySymbol = v },
+                    prefStore = prefStore
+                )
+                STAGE_SETTINGS -> SettingsScreenContent(
+                    aesthetic = aesthetic,
+                    onAestheticChange = { a -> aesthetic = a; prefStore.aestheticIdx = AESTHETICS.indexOf(a) },
+                    onCurrencyChange = { v -> currencySymbol = v; prefStore.currencySymbol = v },
+                    onBack = { stage = STAGE_HOME },
+                    onProfile = { stage = STAGE_PROFILE },
+                    prefStore = prefStore,
+                    isDark = isDark,
+                    text = text,
+                    accent = accent,
+                    muted = muted,
+                    card = card,
+                    surfaceAlt = surfaceAlt,
+                    bg = bg
+                )
+                STAGE_PROFILE -> ProfileScreenContent(
+                    aesthetic = aesthetic,
+                    onAestheticChange = { aesthetic = it },
+                    onBack = { stage = STAGE_HOME },
+                    onSettings = { stage = STAGE_SETTINGS },
+                    isDark = isDark,
+                    text = text,
+                    accent = accent,
+                    muted = muted,
+                    card = card,
+                    surfaceAlt = surfaceAlt,
+                    bg = bg
+                )
+                STAGE_BIN -> BinScreenContent(
+                    entries = deletedSnapshot,
+                    sym = currencySymbol,
+                    aesthetic = aesthetic,
+                    onRestore = { id ->
+                        Repo.restoreEntry(id)
+                        deletedSnapshot = deletedSnapshot.filter { it.id != id }
+                        entriesSnapshot = entriesSnapshot.map { if (it.id == id) it.copy(deleted = false) else it }
+                    },
+                    onDeleteForever = { id ->
+                        Repo.deleteForever(id)
+                        deletedSnapshot = deletedSnapshot.filter { it.id != id }
+                    },
+                    onBack = { stage = STAGE_HOME }
+                )
+            }
+        }
+
+        if (stage == STAGE_HOME || stage == STAGE_SEARCH) {
+            AnimatedVisibility(
+                visible = showEntrySheet,
+                enter = slideInVertically { it } + fadeIn(),
+                exit = slideOutVertically { it } + fadeOut()
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    EntryEditorScreen(
+                        entryId = -1L,
+                        sym = currencySymbol,
+                        aesthetic = aesthetic,
+                        onDismiss = { showEntrySheet = false },
+                        onSaved = {
+                            showEntrySheet = false
+                            entriesSnapshot = Repo.entries()
+                        },
+                        onSymChange = { v -> currencySymbol = v; prefStore.currencySymbol = v },
+                        prefStore = prefStore
+                    )
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = stage == STAGE_HOME || stage == STAGE_SEARCH,
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut()
+        ) {
+            BottomNavBarContent(
+                selected = selectedTab,
+                accent = accent,
+                text = text,
+                muted = muted,
+                bg = bg,
+                onHome = { selectedTab = 0; stage = STAGE_HOME },
+                onSearch = { selectedTab = 1; stage = STAGE_SEARCH },
+                onSettings = { selectedTab = 2; stage = STAGE_SETTINGS },
+                onProfile = { selectedTab = 3; stage = STAGE_PROFILE }
+            )
         }
     }
 }
 
-@Composable private fun CurrencyPicker(selected: String, accent: Color, surface: Color, text: Color, muted: Color, onSelect: (String) -> Unit) {
-    val currencies = listOf("INR", "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "CNY", "NZD")
-    Column {
-        currencies.chunked(5).forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { cur ->
-                    val sel = cur == selected
-                    Surface(onClick = { onSelect(cur) }, shape = RoundedCornerShape(12.dp), color = if (sel) accent else surface, modifier = Modifier.weight(1f)) {
-                        Text(cur, style = TextStyle(color = if (sel) Color.White else text, fontSize = 12.sp, fontWeight = FontWeight.Medium), textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 10.dp))
+@Composable
+private fun HomeScreen(
+    entries: List<LedgerEntry>,
+    searchQuery: String,
+    filterType: Int,
+    sym: String,
+    aesthetic: com.sololedger.ui.theme.Aesthetic,
+    onAdd: () -> Unit,
+    onSearch: () -> Unit,
+    onSettings: () -> Unit,
+    onEditEntry: (Long) -> Unit,
+    onDeleteEntry: (Long) -> Unit,
+    onBin: () -> Unit,
+    onProfile: () -> Unit,
+    onFilterChange: (Int) -> Unit
+) {
+    val accent = aesthetic.accent
+    val bg = aesthetic.surface
+    val text = aesthetic.foreground
+    val muted = aesthetic.muted
+    val card = aesthetic.card
+
+    val totalIncome = entries.filter { it.kind == 0 }.sumOf { it.amountMinor }
+    val totalExpense = entries.filter { it.kind == 1 }.sumOf { it.amountMinor }
+    val balance = totalIncome - totalExpense
+
+    Column(modifier = Modifier.fillMaxSize().background(bg).statusBarsPadding()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("Solo Ledger", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = text)
+                Text(formatDate(System.currentTimeMillis()), fontSize = 12.sp, color = muted)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconBtn("search", text, card, onSearch)
+                IconBtn("bin", text, card, onBin)
+                IconBtn("settings", text, card, onSettings)
+                IconBtn("profile", text, card, onProfile)
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            GlassCard(bg, if (aesthetic.isDark) 0.5f else 0.08f, 16) {
+                Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+                    Text("Total Balance", fontSize = 13.sp, color = muted)
+                    Text("$sym ${formatAmount(balance)}", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = text)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        StatPill("Income", "$sym ${formatAmount(totalIncome)}", Color(0xFF4CAF50), bg)
+                        StatPill("Expense", "$sym ${formatAmount(totalExpense)}", Color(0xFFE91E63), bg)
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(6.dp))
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = if (!currencies.contains(selected)) selected else "", onValueChange = onSelect, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Custom currency symbol", color = muted) }, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = accent, unfocusedBorderColor = Color.Transparent), shape = RoundedCornerShape(14.dp))
-    }
-}
 
-@Composable private fun ToggleRow(label: String, checked: Boolean, accent: Color, muted: Color, onToggle: (Boolean) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = TextStyle(color = muted, fontSize = 14.sp), modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedThumbColor = accent, checkedTrackColor = accent.copy(alpha = 0.4f)))
-    }
-}
-
-@Composable private fun OptionRow(icon: ImageVector, label: String, accent: Color, text: Color, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), shape = RoundedCornerShape(12.dp)) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(label, style = TextStyle(color = text, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            Icon(Icons.Default.ChevronRight, null, tint = text.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip("All", if (filterType == -1) accent else muted, card, text) { onFilterChange(-1) }
+            FilterChip("Income", if (filterType == 0) accent else muted, card, text) { onFilterChange(0) }
+            FilterChip("Expense", if (filterType == 1) accent else muted, card, text) { onFilterChange(1) }
         }
-    }
-}
 
-@Composable private fun SectionHeader(title: String, text: Color) {
-    Text(title, style = TextStyle(color = text, fontSize = 22.sp, fontWeight = FontWeight.Bold), modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp))
-}
+        val filtered = entries.filter { e ->
+            (filterType == -1 || e.kind == filterType) &&
+            (searchQuery.isEmpty() || e.title.contains(searchQuery, ignoreCase = true) || e.category.contains(searchQuery, ignoreCase = true))
+        }
 
-@Composable private fun BottomPadding() { Spacer(modifier = Modifier.height(80.dp)) }
-
-@Composable private fun DeleteDialog(entry: LedgerEntry, aes: Aesthetic, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(onDismissRequest = onDismiss, confirmButton = { Text("Delete", color = Color(0xFFE8537A), onClick = onConfirm) }, dismissButton = { Text("Cancel", color = aes.text.copy(alpha = 0.5f), onClick = onDismiss) }, title = { Text("Delete entry?", color = aes.text) }, text = { Text("\"${entry.title}\" will be permanently deleted.", color = aes.text.copy(alpha = 0.6f)) }, containerColor = aes.surfaceVariant)
-}
-
-@Composable private fun EntrySheet(draft: EntryDraft, categories: List<Category>, aes: Aesthetic, onChange: (EntryDraft) -> Unit, onSave: (EntryDraft) -> Unit, onDismiss: () -> Unit) {
-    val ctx = LocalContext.current
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.BottomCenter) {
-        Card(modifier = Modifier.fillMaxWidth().padding(top = 60.dp), shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp), colors = CardDefaults.cardColors(containerColor = aes.background)) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (draft.editingId != null) "Edit Entry" else "New Entry", style = TextStyle(color = aes.text, fontSize = 18.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close", tint = aes.text) }
+        if (filtered.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No entries yet.\nTap + to add your first!", color = muted, textAlign = TextAlign.Center, fontSize = 15.sp)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 80.dp)
+            ) {
+                items(filtered, key = { it.id }) { entry ->
+                    val isIncome = entry.kind == 0
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16))
+                            .background(card)
+                            .shadow(2.dp, RoundedCornerShape(16))
+                            .clickable { onEditEntry(entry.id) }
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isIncome) Color(0xFF4CAF50).copy(alpha = 0.15f) else Color(0xFFE91E63).copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        if (isIncome) "^" else "v",
+                                        fontSize = 18.sp,
+                                        color = if (isIncome) Color(0xFF4CAF50) else Color(0xFFE91E63),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Column {
+                                    Text(entry.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(entry.category, fontSize = 12.sp, color = muted)
+                                }
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    "${if (isIncome) "+" else "-"} $sym ${formatAmount(entry.amountMinor)}",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isIncome) Color(0xFF4CAF50) else Color(0xFFE91E63)
+                                )
+                            }
+                        }
+                    }
                 }
+            }
+        }
+
+        FloatingActionButton(
+            onClick = onAdd,
+            modifier = Modifier.align(Alignment.End).padding(16.dp).padding(bottom = 72.dp),
+            containerColor = accent,
+            contentColor = Color.White,
+            shape = CircleShape
+        ) {
+            Text("+", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun SearchScreen(
+    entries: List<LedgerEntry>,
+    searchQuery: String,
+    filterType: Int,
+    sym: String,
+    aesthetic: com.sololedger.ui.theme.Aesthetic,
+    onQueryChange: (String) -> Unit,
+    onEditEntry: (Long) -> Unit,
+    onDeleteEntry: (Long) -> Unit,
+    onFilterChange: (Int) -> Unit,
+    onBack: () -> Unit
+) {
+    val accent = aesthetic.accent
+    val bg = aesthetic.surface
+    val text = aesthetic.foreground
+    val muted = aesthetic.muted
+    val card = aesthetic.card
+
+    Column(modifier = Modifier.fillMaxSize().background(bg).statusBarsPadding()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconBtn("back", text, card, onBack)
+            Spacer(modifier = Modifier.width(12.dp))
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onQueryChange,
+                placeholder = { Text("Search entries...", color = muted) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = accent, unfocusedBorderColor = muted)
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip("All", if (filterType == -1) accent else muted, card, text) { onFilterChange(-1) }
+            FilterChip("Income", if (filterType == 0) accent else muted, card, text) { onFilterChange(0) }
+            FilterChip("Expense", if (filterType == 1) accent else muted, card, text) { onFilterChange(1) }
+        }
+        val filtered = entries.filter { e ->
+            (filterType == -1 || e.kind == filterType) &&
+            (searchQuery.isEmpty() || e.title.contains(searchQuery, ignoreCase = true) || e.category.contains(searchQuery, ignoreCase = true))
+        }
+        if (filtered.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No results found.", color = muted, fontSize = 15.sp)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 80.dp)
+            ) {
+                items(filtered, key = { it.id }) { entry ->
+                    val isIncome = entry.kind == 0
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16))
+                            .background(card)
+                            .shadow(2.dp, RoundedCornerShape(16))
+                            .clickable { onEditEntry(entry.id) }
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isIncome) Color(0xFF4CAF50).copy(alpha = 0.15f) else Color(0xFFE91E63).copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(if (isIncome) "^" else "v", fontSize = 18.sp, color = if (isIncome) Color(0xFF4CAF50) else Color(0xFFE91E63), fontWeight = FontWeight.Bold)
+                                }
+                                Column {
+                                    Text(entry.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(entry.category, fontSize = 12.sp, color = muted)
+                                }
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("${if (isIncome) "+" else "-"} $sym ${formatAmount(entry.amountMinor)}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (isIncome) Color(0xFF4CAF50) else Color(0xFFE91E63))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EntryEditorScreen(
+    entryId: Long,
+    sym: String,
+    aesthetic: com.sololedger.ui.theme.Aesthetic,
+    onDismiss: () -> Unit,
+    onSaved: () -> Unit,
+    onSymChange: (String) -> Unit,
+    prefStore: PrefStore
+) {
+    val accent = aesthetic.accent
+    val bg = aesthetic.surface
+    val text = aesthetic.foreground
+    val muted = aesthetic.muted
+    val surfaceAlt = aesthetic.surfaceAlt
+    val ctx = LocalContext.current
+
+    var kind by remember { mutableIntStateOf(1) }
+    var title by remember { mutableStateOf("") }
+    var amountStr by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf(CATEGORIES[0]) }
+    var note by remember { mutableStateOf("") }
+    var dateMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var showCatPicker by remember { mutableStateOf(false) }
+    var showSymPicker by remember { mutableStateOf(false) }
+
+    val isEdit = entryId > 0
+
+    LaunchedEffect(entryId) {
+        if (isEdit) {
+            Repo.entries().find { it.id == entryId }?.let { e ->
+                kind = e.kind
+                title = e.title
+                amountStr = if (e.amountMinor != 0) (e.amountMinor / 100.0).toString() else ""
+                category = e.category
+                note = e.note
+                dateMs = e.dateMs
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable(onClick = onDismiss)) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 24, topEnd = 24))
+                .background(bg)
+                .clickable(enabled = true, onClick = {})
+                .padding(24.dp)
+                .navigationBarsPadding()
+        ) {
+            Text(if (isEdit) "Edit Entry" else "Add Entry", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = text)
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12))
+                        .background(if (kind == 0) accent else surfaceAlt)
+                        .clickable { kind = 0 }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Income", fontSize = 14.sp, color = if (kind == 0) Color.White else muted, fontWeight = FontWeight.SemiBold)
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12))
+                        .background(if (kind == 1) accent else surfaceAlt)
+                        .clickable { kind = 1 }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Expense", fontSize = 14.sp, color = if (kind == 1) Color.White else muted, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = accent, unfocusedBorderColor = muted, focusedLabelColor = accent),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = amountStr,
+                    onValueChange = { amountStr = it.filter { c -> c.isDigit() || c == '.' } },
+                    label = { Text("Amount") },
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = accent, unfocusedBorderColor = muted, focusedLabelColor = accent),
+                    singleLine = true
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(0.45f)
+                        .clip(RoundedCornerShape(4))
+                        .background(surfaceAlt)
+                        .clickable { showSymPicker = true }
+                        .padding(16.dp)
+                ) {
+                    Text(sym, fontSize = 16.sp, color = text)
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(4))
+                    .background(surfaceAlt)
+                    .clickable { showCatPicker = true }
+                    .padding(16.dp)
+            ) {
+                Text(category, fontSize = 16.sp, color = text)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = note,
+                onValueChange = { note = it },
+                label = { Text("Notes") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = accent, unfocusedBorderColor = muted, focusedLabelColor = accent),
+                maxLines = 3
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(4))
+                    .background(surfaceAlt)
+                    .clickable {
+                        val cal = Calendar.getInstance()
+                        DatePickerDialog(
+                            ctx,
+                            { _, y, m, d -> cal.set(y, m, d); dateMs = cal.timeInMillis },
+                            cal.get(Calendar.YEAR),
+                            cal.get(Calendar.MONTH),
+                            cal.get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    }
+                    .padding(16.dp)
+            ) {
+                Text(formatDate(dateMs), fontSize = 16.sp, color = text)
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = {
+                    val amountMinor = (amountStr.toDoubleOrNull() ?: 0.0).times(100).toInt()
+                    if (title.isNotBlank() && amountMinor > 0) {
+                        if (isEdit) Repo.updateEntry(entryId, title, amountMinor, kind, category, note, dateMs)
+                        else Repo.addEntry(title, amountMinor, kind, category, note, dateMs)
+                        onSaved()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = accent),
+                shape = RoundedCornerShape(12)
+            ) {
+                Text(if (isEdit) "Update Entry" else "Save Entry", fontSize = 16.sp, modifier = Modifier.padding(vertical = 4.dp))
+            }
+        }
+    }
+
+    if (showCatPicker) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable { showCatPicker = false }) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 24, topEnd = 24))
+                    .background(bg)
+                    .clickable(enabled = true, onClick = {})
+                    .padding(24.dp)
+                    .navigationBarsPadding()
+            ) {
+                Text("Select Category", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = text)
                 Spacer(modifier = Modifier.height(16.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(EntryKind.EXPENSE to "Expense", EntryKind.INCOME to "Income").forEach { (kind, label) ->
-                        val sel = draft.kind == kind
-                        val c = if (sel) (if (kind == EntryKind.EXPENSE) Color(0xFFE8537A) else aes.accent) else aes.surfaceVariant
-                        Surface(onClick = { onChange(draft.copy(kind = kind)) }, shape = RoundedCornerShape(16.dp), color = c, modifier = Modifier.weight(1f)) {
-                            Text(label, style = TextStyle(color = if (sel) Color.White else aes.text, fontSize = 13.sp, fontWeight = FontWeight.Medium), textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 12.dp))
+                LazyColumn {
+                    items(CATEGORIES.size) { idx ->
+                        val cat = CATEGORIES[idx]
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { category = cat; showCatPicker = false }.padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(cat, fontSize = 16.sp, color = text)
+                            if (cat == category) Text("Selected", fontSize = 14.sp, color = accent)
                         }
+                        if (idx < CATEGORIES.lastIndex) HorizontalDivider(color = muted.copy(alpha = 0.2f))
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+            }
+        }
+    }
 
-                OutlinedTextField(value = draft.amountStr, onValueChange = { onChange(draft.copy(amountStr = it)) }, modifier = Modifier.fillMaxWidth(), label = { Text("Amount") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = aes.accent, unfocusedBorderColor = Color.Transparent), shape = RoundedCornerShape(14.dp))
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(value = draft.title, onValueChange = { onChange(draft.copy(title = it)) }, modifier = Modifier.fillMaxWidth(), label = { Text("Title") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = aes.accent, unfocusedBorderColor = Color.Transparent), shape = RoundedCornerShape(14.dp))
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(value = draft.notes, onValueChange = { onChange(draft.copy(notes = it)) }, modifier = Modifier.fillMaxWidth(), label = { Text("Notes (optional)") }, maxLines = 3, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = aes.accent, unfocusedBorderColor = Color.Transparent), shape = RoundedCornerShape(14.dp))
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text("Category", style = TextStyle(color = aes.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold))
-                Spacer(modifier = Modifier.height(6.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(categories.filter { it.kind == draft.kind || draft.kind == EntryKind.EXPENSE }) {
-                        val sel = draft.category == it.name
-                        Surface(onClick = { onChange(draft.copy(category = it.name, color = it.color, icon = it.icon)) }, shape = RoundedCornerShape(14.dp), color = if (sel) Color(it.color) else aes.surfaceVariant) {
-                            Text(it.name, style = TextStyle(color = if (sel) Color.White else Color(it.color), fontSize = 11.sp), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+    if (showSymPicker) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable { showSymPicker = false }) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 24, topEnd = 24))
+                    .background(bg)
+                    .clickable(enabled = true, onClick = {})
+                    .padding(24.dp)
+                    .navigationBarsPadding()
+            ) {
+                Text("Select Currency", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = text)
+                Spacer(modifier = Modifier.height(16.dp))
+                LazyColumn {
+                    items(CURRENCIES.size) { idx ->
+                        val (s, name) = CURRENCIES[idx]
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { onSymChange(s); showSymPicker = false }.padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(s, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = text)
+                                Text(name, fontSize = 12.sp, color = muted)
+                            }
+                            if (s == sym) Text("Selected", fontSize = 14.sp, color = accent)
                         }
+                        if (idx < CURRENCIES.lastIndex) HorizontalDivider(color = muted.copy(alpha = 0.2f))
                     }
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Surface(onClick = {
-                    val calendar = java.util.Calendar.getInstance()
-                    DatePickerDialog(ctx, { _, y, m, d ->
-                        calendar.set(y, m, d)
-                        onChange(draft.copy(dateMs = calendar.timeInMillis))
-                    }, java.util.Calendar.getInstance().get(java.util.Calendar.YEAR), java.util.Calendar.getInstance().get(java.util.Calendar.MONTH), java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH)).show()
-                }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp), color = aes.surfaceVariant) {
-                    Row(modifier = Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CalendarToday, null, tint = aes.accent, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(java.time.Instant.ofEpochMilli(draft.dateMs).atZone(java.time.ZoneId.systemDefault()).toLocalDate().format(dFmt), style = TextStyle(color = aes.text, fontSize = 14.sp))
-                    }
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(onClick = { onSave(draft) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = aes.accent)) {
-                    Text(if (draft.editingId != null) "Update Entry" else "Save Entry", style = TextStyle(color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold))
                 }
             }
         }
     }
 }
 
-@Composable private fun AnimatedBottomNav(selected: NavTab, accent: Color, surface: Color, text: Color, muted: Color, onSelect: (NavTab) -> Unit) {
-    val items = listOf(NavTab.Home to Icons.Default.Home, NavTab.History to Icons.Default.History, NavTab.Reports to Icons.Default.BarChart, NavTab.Settings to Icons.Default.Settings, NavTab.Profile to Icons.Default.Person)
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = surface), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            items.forEach { (tab, icon) ->
-                val sel = selected == tab
-                val scale by animateFloatAsState(targetValue = if (sel) 1.15f else 1f, label = "")
-                Column(onClick = { onSelect(tab) }, horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp)) {
-                    Icon(icon, null, tint = if (sel) accent else muted, modifier = Modifier.scale(scale).size(if (sel) 26.dp else 22.dp))
-                    if (sel) Text(tab.name.lowercase().replaceFirstChar { it.uppercase() }, style = TextStyle(color = accent, fontSize = 9.sp, fontWeight = FontWeight.Bold))
+@Composable
+private fun SettingsScreenContent(
+    aesthetic: com.sololedger.ui.theme.Aesthetic,
+    onAestheticChange: (com.sololedger.ui.theme.Aesthetic) -> Unit,
+    onCurrencyChange: (String) -> Unit,
+    onBack: () -> Unit,
+    onProfile: () -> Unit,
+    prefStore: PrefStore,
+    isDark: Boolean,
+    text: Color,
+    accent: Color,
+    muted: Color,
+    card: Color,
+    surfaceAlt: Color,
+    bg: Color
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bg)
+            .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 80.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconBtn("back", text, card, onBack)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("Settings", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = text)
+        }
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            GlassCard(bg, if (isDark) 0.3f else 0.05f, 16) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("Appearance", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = text)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn {
+                        items(AESTHETICS.size) { idx ->
+                            val a = AESTHETICS[idx]
+                            val isSelected = idx == AESTHETICS.indexOf(aesthetic)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10))
+                                    .then(if (isSelected) Modifier.background(a.accent.copy(alpha = 0.15f), RoundedCornerShape(10)).padding(8.dp) else Modifier)
+                                    .clickable { onAestheticChange(a) }
+                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(a.accent))
+                                    Column {
+                                        Text("Theme ${idx + 1}", fontSize = 14.sp, color = text)
+                                        Text(if (a.isDark) "Dark" else "Light", fontSize = 12.sp, color = muted)
+                                    }
+                                }
+                                if (isSelected) Text("Active", fontSize = 13.sp, color = a.accent, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            GlassCard(bg, if (isDark) 0.3f else 0.05f, 16) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("Display", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = text)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ToggleRow("Show Title", prefStore.showTitle, accent, text, muted, card) { prefStore.showTitle = it }
+                    ToggleRow("Show Category", prefStore.showCategory, accent, text, muted, card) { prefStore.showCategory = it }
+                    ToggleRow("Show Notes", prefStore.showNotes, accent, text, muted, card) { prefStore.showNotes = it }
+                    ToggleRow("Show Date", prefStore.showDate, accent, text, muted, card) { prefStore.showDate = it }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            GlassCard(bg, if (isDark) 0.3f else 0.05f, 16) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { onProfile() }.padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Profile", fontSize = 16.sp, color = text)
+                        Text("->", color = muted, fontSize = 18.sp)
+                    }
+                    HorizontalDivider(color = muted.copy(alpha = 0.2f))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { onCurrencyChange(prefStore.currencySymbol) }.padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Currency", fontSize = 16.sp, color = text)
+                        Text("->", color = muted, fontSize = 18.sp)
+                    }
                 }
             }
         }
     }
 }
 
-@Composable private fun GlassCircle(icon: String, color: Color, size: Dp) {
-    val icons = mapOf("payments" to Icons.Default.Payments, "restaurant" to Icons.Default.Restaurant, "directions_car" to Icons.Default.DirectionsCar, "local_gas_station" to Icons.Default.LocalGasStation, "shopping_bag" to Icons.Default.ShoppingBag, "home" to Icons.Default.Home, "movie" to Icons.Default.Movie, "school" to Icons.Default.School, "flight" to Icons.Default.Flight, "fitness_center" to Icons.Default.FitnessCenter, "medical_services" to Icons.Default.MedicalServices, "work" to Icons.Default.Work, "celebration" to Icons.Default.Celebration, "pets" to Icons.Default.Pets, "checkroom" to Icons.Default.Checkroom, "coffee" to Icons.Default.Coffee)
-    val mapped = icons[icon] ?: Icons.Default.Payments
-    Surface(modifier = Modifier.size(size), shape = CircleShape, color = color.copy(alpha = 0.2f)) {
-        Box(contentAlignment = Alignment.Center) { Icon(mapped, null, tint = color, modifier = Modifier.size(size * 0.5f)) }
+@Composable
+private fun ToggleRow(label: String, checked: Boolean, accent: Color, text: Color, muted: Color, card: Color, onToggle: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, fontSize = 15.sp, color = text)
+        Switch(
+            checked = checked,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = accent,
+                checkedTrackColor = accent.copy(alpha = 0.4f),
+                uncheckedThumbColor = muted,
+                uncheckedTrackColor = muted.copy(alpha = 0.3f)
+            )
+        )
     }
 }
+
+@Composable
+private fun ProfileScreenContent(
+    aesthetic: com.sololedger.ui.theme.Aesthetic,
+    onAestheticChange: (com.sololedger.ui.theme.Aesthetic) -> Unit,
+    onBack: () -> Unit,
+    onSettings: () -> Unit,
+    isDark: Boolean,
+    text: Color,
+    accent: Color,
+    muted: Color,
+    card: Color,
+    surfaceAlt: Color,
+    bg: Color
+) {
+    val ctx = LocalContext.current
+    val quote = SUPPORT_QUOTES.random()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bg)
+            .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 80.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconBtn("back", text, card, onBack)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("Profile", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = text)
+        }
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            GlassCard(bg, if (isDark) 0.5f else 0.08f, 16) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(accent)
+                            .clickable { onSettings() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("S", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Solo Ledger", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = text)
+                    Text("Personal Finance Tracker", fontSize = 14.sp, color = muted)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            GlassCard(bg, if (isDark) 0.3f else 0.05f, 16) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("Choose Theme", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = text)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn {
+                        items(AESTHETICS.size) { idx ->
+                            val a = AESTHETICS[idx]
+                            val isSelected = idx == AESTHETICS.indexOf(aesthetic)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10))
+                                    .then(if (isSelected) Modifier.background(a.accent.copy(alpha = 0.15f), RoundedCornerShape(10)).padding(8.dp) else Modifier)
+                                    .clickable { onAestheticChange(a) }
+                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(a.accent))
+                                    Column {
+                                        Text("Theme ${idx + 1}", fontSize = 14.sp, color = text)
+                                        Text(if (a.isDark) "Dark" else "Light", fontSize = 12.sp, color = muted)
+                                    }
+                                }
+                                if (isSelected) Text("Active", fontSize = 13.sp, color = a.accent, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            GlassCard(bg, if (isDark) 0.3f else 0.05f, 16) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("Support", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = text)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(quote, fontSize = 12.sp, color = muted, fontWeight = FontWeight.Light)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SUPPORT_LINKS.forEach { (label, url) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(label, fontSize = 15.sp, color = text)
+                            Text("->", color = muted, fontSize = 18.sp)
+                        }
+                        HorizontalDivider(color = muted.copy(alpha = 0.2f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BinScreenContent(
+    entries: List<LedgerEntry>,
+    sym: String,
+    aesthetic: com.sololedger.ui.theme.Aesthetic,
+    onRestore: (Long) -> Unit,
+    onDeleteForever: (Long) -> Unit,
+    onBack: () -> Unit
+) {
+    val text = aesthetic.foreground
+    val muted = aesthetic.muted
+    val card = aesthetic.card
+    val surfaceAlt = aesthetic.surfaceAlt
+    val accent = aesthetic.accent
+
+    Column(modifier = Modifier.fillMaxSize().background(aesthetic.surface).statusBarsPadding()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconBtn("back", text, card, onBack)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("Bin", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = text)
+        }
+        if (entries.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Bin is empty", color = muted, fontSize = 15.sp)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 80.dp)
+            ) {
+                items(entries, key = { it.id }) { entry ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14))
+                            .background(card)
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(entry.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(formatDate(entry.dateMs), fontSize = 12.sp, color = muted)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            IconBtn("restore", accent, surfaceAlt) { onRestore(entry.id) }
+                            IconBtn("delete", Color(0xFFE91E63), surfaceAlt) { onDeleteForever(entry.id) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BottomNavBarContent(
+    selected: Int,
+    accent: Color,
+    text: Color,
+    muted: Color,
+    bg: Color,
+    onHome: () -> Unit,
+    onSearch: () -> Unit,
+    onSettings: () -> Unit,
+    onProfile: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(bg)
+            .navigationBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onHome).padding(8.dp)) {
+                Text("Home", fontSize = 12.sp, color = if (selected == 0) accent else muted, fontWeight = if (selected == 0) FontWeight.Bold else FontWeight.Normal)
+                Box(modifier = Modifier.height(3.dp).width(if (selected == 0) 20.dp else 0.dp).background(if (selected == 0) accent else Color.Transparent, RoundedCornerShape(2)))
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onSearch).padding(8.dp)) {
+                Text("Search", fontSize = 12.sp, color = if (selected == 1) accent else muted, fontWeight = if (selected == 1) FontWeight.Bold else FontWeight.Normal)
+                Box(modifier = Modifier.height(3.dp).width(if (selected == 1) 20.dp else 0.dp).background(if (selected == 1) accent else Color.Transparent, RoundedCornerShape(2)))
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onSettings).padding(8.dp)) {
+                Text("Settings", fontSize = 12.sp, color = if (selected == 2) accent else muted, fontWeight = if (selected == 2) FontWeight.Bold else FontWeight.Normal)
+                Box(modifier = Modifier.height(3.dp).width(if (selected == 2) 20.dp else 0.dp).background(if (selected == 2) accent else Color.Transparent, RoundedCornerShape(2)))
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onProfile).padding(8.dp)) {
+                Text("Profile", fontSize = 12.sp, color = if (selected == 3) accent else muted, fontWeight = if (selected == 3) FontWeight.Bold else FontWeight.Normal)
+                Box(modifier = Modifier.height(3.dp).width(if (selected == 3) 20.dp else 0.dp).background(if (selected == 3) accent else Color.Transparent, RoundedCornerShape(2)))
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlassCard(bg: Color, alpha: Float, rad: Int, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(rad))
+            .background(bg.copy(alpha = alpha))
+            .padding(16.dp),
+        content = content
+    )
+}
+
+@Composable
+private fun IconBtn(icon: String, color: Color, bg: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(bg)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            when (icon) {
+                "back" -> "<"
+                "search" -> "?"
+                "bin" -> "#"
+                "settings" -> "*"
+                "profile" -> "@"
+                "restore" -> "R"
+                "delete" -> "X"
+                else -> icon
+            },
+            fontSize = 16.sp,
+            color = color,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun FilterChip(label: String, color: Color, bg: Color, text: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(label, fontSize = 13.sp, color = color, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun StatPill(label: String, value: String, color: Color, bg: Color) {
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12))
+            .background(color.copy(alpha = 0.1f))
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
+        Text(label, fontSize = 12.sp, color = color)
+        Text(value, fontSize = 15.sp, color = color, fontWeight = FontWeight.Bold)
+    }
+}
+
+private fun formatAmount(minor: Int): String {
+    val d = minor / 100.0
+    return if (d == d.toLong().toDouble()) d.toLong().toString() else String.format("%.2f", d)
+}
+
+private fun formatDate(ms: Long): String =
+    SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(ms))
