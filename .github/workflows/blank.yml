@@ -1,4 +1,4 @@
-name: Build Signed Debug APK
+name: Android Debug APK
 
 on:
   workflow_dispatch:
@@ -8,88 +8,41 @@ on:
       - master
 
 jobs:
-  build-debug:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Grant Gradle Permission
-        run: chmod +x gradlew
+      - name: Accept Licenses
+        run: yes | sdkmanager --licenses
 
-      - name: Generate Debug Keystore
+      - name: Install Required SDK
         run: |
-          mkdir -p ~/.android
+          sdkmanager \
+          "platform-tools" \
+          "platforms;android-34" \
+          "build-tools;34.0.0"
 
-          keytool -genkey -v \
-          -keystore ~/.android/debug.keystore \
-          -storepass android \
-          -alias androiddebugkey \
-          -keypass android \
-          -keyalg RSA \
-          -keysize 2048 \
-          -validity 10000 \
-          -dname "CN=Android Debug,O=Android,C=US"
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
-      - name: Inject Signing Config Automatically
-        run: |
-          BUILD_FILE="app/build.gradle"
-
-          if [ -f "app/build.gradle.kts" ]; then
-            BUILD_FILE="app/build.gradle.kts"
-
-            sed -i '/android {/a\
-                signingConfigs {\
-                    create("debug") {\
-                        storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")\
-                        storePassword = "android"\
-                        keyAlias = "androiddebugkey"\
-                        keyPassword = "android"\
-                    }\
-                }\
-            ' $BUILD_FILE
-
-            sed -i '/buildTypes {/a\
-                    getByName("debug") {\
-                        signingConfig = signingConfigs.getByName("debug")\
-                    }\
-            ' $BUILD_FILE
-
-          else
-            sed -i '/android {/a\
-                signingConfigs {\
-                    debug {\
-                        storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")\
-                        storePassword "android"\
-                        keyAlias "androiddebugkey"\
-                        keyPassword "android"\
-                    }\
-                }\
-            ' $BUILD_FILE
-
-            sed -i '/buildTypes {/a\
-                    debug {\
-                        signingConfig signingConfigs.debug\
-                    }\
-            ' $BUILD_FILE
-          fi
-
-      - name: Build Signed Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: signed-debug-apk
-          path: |
-            app/build/outputs/apk/debug/*.apk
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
