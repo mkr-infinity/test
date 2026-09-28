@@ -1,0 +1,7 @@
+<resources>
+    <color name="ao_bg">#242424</color>
+    <color name="ao_panel">#2D2D2D</color>
+    <color name="ao_cyan">#08B8C8</color>
+    <color name="ao_text">#F2F2F2</color>
+    <color name="ao_muted">#B8B8B8</color>
+</resources>

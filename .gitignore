@@ -1,7 +1,10 @@
-*.apk
 .gradle/
-.gradle/
-build/
+.idea/
 local.properties
-*.class
-*.log
+*.iml
+/build/
+*/build/
+.cxx/
+.externalNativeBuild/
+*.jks
+*.keystore
