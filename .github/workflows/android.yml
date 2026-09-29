@@ -1,0 +1,67 @@
+name: Android CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CI_KEYSTORE_PATH: ${{ runner.temp }}/autooptimiser-release.keystore
+      CI_KEYSTORE_PASSWORD: autooptimiser-ci-password
+      CI_KEY_ALIAS: autooptimiser-ci
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Generate temporary release keystore
+        shell: bash
+        run: |
+          keytool -genkeypair -v \
+            -storetype PKCS12 \
+            -keystore "$CI_KEYSTORE_PATH" \
+            -alias "$CI_KEY_ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 1 \
+            -storepass "$CI_KEYSTORE_PASSWORD" \
+            -keypass "$CI_KEYSTORE_PASSWORD" \
+            -dname "CN=Auto Optimiser CI, OU=CI, O=MKR Infinity, L=CI, ST=CI, C=US"
+
+      - name: Run unit tests and assemble debug APK
+        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug
+
+      - name: Assemble signed release APK
+        run: |
+          gradle --no-daemon --stacktrace \
+            -PreleaseStoreFile="$CI_KEYSTORE_PATH" \
+            -PreleaseStorePassword="$CI_KEYSTORE_PASSWORD" \
+            -PreleaseKeyAlias="$CI_KEY_ALIAS" \
+            -PreleaseKeyPassword="$CI_KEYSTORE_PASSWORD" \
+            assembleRelease
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: autooptimiser-release
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

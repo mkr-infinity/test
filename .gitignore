@@ -1,0 +1,15 @@
+# Gradle and Android build outputs
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+.kotlin/
+
+# Local agent/reference artifacts
+.firecrawl/
+__agent__/
+
+# Signing material must never be committed
+*.keystore
+*.jks
