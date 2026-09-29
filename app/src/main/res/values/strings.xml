@@ -1,4 +1,0 @@
-<resources>
-    <string name="app_name">Auto Optimizer</string>
-    <string name="accessibility_service_description">Auto Optimizer uses Accessibility to automate permitted Android Settings actions such as Force stop and cache-cleanup flows. It does not read or upload your screen content.</string>
-</resources>
