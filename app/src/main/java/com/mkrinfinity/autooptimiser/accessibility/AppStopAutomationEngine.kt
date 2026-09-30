@@ -14,13 +14,17 @@ class AppStopAutomationEngine(private val timeoutMillis: Long = 10_000L) {
         private set
 
     fun enter(next: StopStep, nowMillis: Long): Boolean {
-        if (next == StopStep.CANCELLED && state != StopStep.COMPLETED) {
+        // Repeated content events must never renew the current step's deadline.
+        if (next == state) return false
+        if (next == StopStep.CANCELLED && state != StopStep.COMPLETED && state != StopStep.IDLE) {
             state = next
             enteredAtMillis = nowMillis
             deadlineMillis = 0L
             return true
         }
         if (!isAllowed(state, next)) return false
+        if (timedOut(nowMillis) && next != StopStep.RETURNING && next != StopStep.TIMED_OUT &&
+            next != StopStep.FAILED && next != StopStep.COMPLETED) return false
         state = next
         enteredAtMillis = nowMillis
         deadlineMillis = if (next == StopStep.IDLE || next == StopStep.COMPLETED || next == StopStep.CANCELLED) 0L else nowMillis + timeoutMillis
