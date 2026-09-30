@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 108 108" role="img" aria-labelledby="title desc">
   <title id="title">Auto Optimiser</title>
   <desc id="desc">Original minimal rocket with an open blue and cyan orbit and a short amber flame.</desc>
-  <rect width="108" height="108" rx="24" fill="#F8FAFC"/>
   <path fill="none" fill-rule="evenodd" stroke="#1675D1" stroke-width="3.5" stroke-linecap="round" d="M42,28 C30,33 24,43 24,54 C24,66 31,75 42,80"/>
   <path fill="none" fill-rule="evenodd" stroke="#11B6BD" stroke-width="3.5" stroke-linecap="round" d="M66,28 C78,33 84,43 84,54 C84,66 77,75 66,80"/>
   <path fill="#1761BD" fill-rule="evenodd" d="M42,53 C36,56 33,63 34,70 L45,63 Z"/>
