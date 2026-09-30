@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Auto Optimiser</title>
+  <desc id="desc">Two balanced open loops: a minimal mark for deliberate, controlled optimisation.</desc>
+  <rect width="96" height="96" rx="22" fill="#E8F0EA"/>
+  <g fill="none" stroke="#306B5E" stroke-width="7" stroke-linecap="round">
+    <path d="M48 20C32.5 20 20 32.5 20 48S32.5 76 48 76 76 63.5 76 48"/>
+    <path d="M48 34C55.7 34 62 40.3 62 48S55.7 62 48 62 34 55.7 34 48"/>
+  </g>
+</svg>
