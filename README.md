@@ -126,6 +126,7 @@ The project is intentionally configured for GitHub Actions rather than a local A
 - Assembles a release APK.
 - Generates a temporary one-day PKCS12 keystore on the runner.
 - Uploads the release artifact.
+- Publishes a GitHub Release with the APK when a tag matching `v*` is pushed.
 
 The temporary CI key is not a real distribution identity. Replace it with a securely stored long-lived signing key before publishing updates to an existing package. No keystore binary is committed, and changes are committed locally only; the repository is not pushed by the coding agent.
 
