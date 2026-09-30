@@ -4,6 +4,8 @@ import com.mkrinfinity.autooptimiser.storage.DuplicateDetector
 import com.mkrinfinity.autooptimiser.storage.ScannedFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import java.util.concurrent.CancellationException
 
 class DuplicateDetectorTest {
     private fun file(path: String, size: Long, hash: String? = null) = ScannedFile(
@@ -28,6 +30,27 @@ class DuplicateDetectorTest {
         assertEquals("/music/a.mp3", groups.single().canonicalFile.path)
         assertEquals(20L, groups.single().reclaimableBytes)
         assertEquals(20L, DuplicateDetector.reclaimableBytes(files))
+    }
+
+    @Test
+    fun conflictingSizesCannotFormADuplicateGroup() {
+        assertEquals(emptyList(), DuplicateDetector.findGroups(listOf(file("/a", 4, "hash"), file("/b", 5, "hash"))))
+    }
+
+    @Test
+    fun repeatedIdentityIsNotAnExtraCopy() {
+        val original = file("/a", 4, "hash")
+        assertEquals(emptyList(), DuplicateDetector.findGroups(listOf(original, original)))
+    }
+
+    @Test
+    fun detectorPropagatesCancellationWhileGrouping() {
+        var checks = 0
+        assertFailsWith<CancellationException> {
+            DuplicateDetector.findGroups(listOf(file("/a", 4, "hash"), file("/b", 4, "hash"))) {
+                if (++checks == 2) throw CancellationException("cancel")
+            }
+        }
     }
 
     @Test

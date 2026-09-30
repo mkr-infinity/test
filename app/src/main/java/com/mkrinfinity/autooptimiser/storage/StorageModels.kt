@@ -1,6 +1,6 @@
 package com.mkrinfinity.autooptimiser.storage
 
-/** Metadata returned by a scanner; file contents are not read by this model. */
+/** Metadata returned by a scanner; contentHash, if present, must be a verified FULL content hash. */
 data class ScannedFile(
     val path: String,
     val sizeBytes: Long,
@@ -38,7 +38,7 @@ data class StorageScan(
         get() = files.sumOf(ScannedFile::sizeBytes)
 }
 
-/** Platform-specific implementations can use java.io or MediaStore without changing domain logic. */
+/** Platform-independent scan contract; Android storage access uses the user-selected SAF tree. */
 fun interface StorageScanner {
     fun scan(root: String, scannedAtEpochMillis: Long): StorageScan
 }
@@ -50,6 +50,8 @@ data class DuplicateGroup(
     init {
         require(contentHash.isNotBlank()) { "contentHash must not be blank" }
         require(files.size >= 2) { "A duplicate group must contain at least two files" }
+        require(files.map { it.path }.toSet().size == files.size) { "Duplicate identities are not extra copies" }
+        require(files.all { it.sizeBytes == files.first().sizeBytes }) { "Duplicate sizes must agree" }
         require(files.all { it.contentHash == contentHash }) {
             "Every file must have the group's content hash"
         }
