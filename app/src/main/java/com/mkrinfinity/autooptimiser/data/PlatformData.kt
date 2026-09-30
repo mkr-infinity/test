@@ -2,7 +2,6 @@ package com.mkrinfinity.autooptimiser.data
 
 import android.app.ActivityManager
 import android.app.Application
-import android.app.usage.StorageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -12,7 +11,6 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
-import android.os.storage.StorageManager
 import android.provider.Settings
 import androidx.core.content.pm.PackageInfoCompat
 import com.mkrinfinity.autooptimiser.model.AppInventoryItem
@@ -20,6 +18,8 @@ import com.mkrinfinity.autooptimiser.model.ProtectedApp
 import com.mkrinfinity.autooptimiser.model.ProtectionReason
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.coroutineContext
 import kotlin.math.roundToInt
 import java.text.DateFormat
 import java.util.Date
@@ -50,7 +50,10 @@ data class DeviceStatus(
     val batteryTemperatureCelsius: Float?,
     val batteryHealth: String?,
     val batteryOptimisationIgnored: Boolean,
-    val measuredAtMillis: Long
+    val measuredAtMillis: Long,
+    val batteryCurrentMicroamps: Int? = null,
+    val remainingChargeMicroampHours: Int? = null,
+    val batterySaverEnabled: Boolean = false
 ) {
     val memoryUsedBytes: Long get() = (memoryTotalBytes - memoryAvailableBytes).coerceAtLeast(0)
     val memoryUsedPercent: Int get() = if (memoryTotalBytes == 0L) 0 else (memoryUsedBytes * 100 / memoryTotalBytes).toInt()
@@ -63,6 +66,7 @@ class AppRepository(private val app: Application) {
     private val inventoryCache = linkedMapOf<String, AppRecord>()
 
     suspend fun refresh(protectedPackages: Map<String, ProtectedApp>): List<AppRecord> = withContext(Dispatchers.IO) {
+        val scanContext = coroutineContext
         val runningPackages = runningPackages()
         val enabledAccessibilityPackages = enabledAccessibilityPackages()
         val launcherPackage = launcherPackage()
@@ -73,11 +77,12 @@ class AppRepository(private val app: Application) {
             .asSequence()
             .filter { it.packageName != "android" }
             .mapNotNull { info ->
+                scanContext.ensureActive()
                 runCatching {
                     val packageInfo = packageManager.getPackageInfo(info.packageName, 0)
                     val isSystem = info.flags and ApplicationInfo.FLAG_SYSTEM != 0 ||
                         info.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0
-                    val protected = protectedPackages[info.packageName]
+                    val userProtection = protectedPackages[info.packageName]
                     val critical = when {
                         info.packageName == ownPackage -> ProtectionReason.SYSTEM_CRITICAL
                         info.packageName == launcherPackage -> ProtectionReason.SYSTEM_CRITICAL
@@ -85,7 +90,7 @@ class AppRepository(private val app: Application) {
                         defaultKeyboardPackage == info.packageName -> ProtectionReason.SYSTEM_CRITICAL
                         enabledAccessibilityPackages.contains(info.packageName) -> ProtectionReason.SYSTEM_CRITICAL
                         isSystem -> ProtectionReason.SYSTEM_CRITICAL
-                        else -> protected?.reason
+                        else -> userProtection?.reason
                     }
                     AppRecord(
                         inventory = AppInventoryItem(
@@ -98,9 +103,9 @@ class AppRepository(private val app: Application) {
                             isSystemApp = isSystem,
                             isEnabled = info.enabled,
                             isLaunchable = packageManager.getLaunchIntentForPackage(info.packageName) != null,
-                            sizeBytes = info.sourceDir?.let { java.io.File(it).length() }?.takeIf { it > 0 }
+                            sizeBytes = (listOfNotNull(info.sourceDir) + info.splitSourceDirs.orEmpty()).sumOf { java.io.File(it).length() }.takeIf { it > 0 }
                         ),
-                        icon = info.loadIcon(packageManager),
+                        icon = cached(info.packageName)?.takeIf { it.inventory.lastUpdateTimeMillis == packageInfo.lastUpdateTime }?.icon ?: info.loadIcon(packageManager),
                         isRunning = runningPackages.contains(info.packageName),
                         isProtected = critical != null,
                         protectionReason = critical
@@ -139,7 +144,7 @@ class AppRepository(private val app: Application) {
     }.getOrNull()
 }
 
-class DeviceRepository(private val app: Application) {
+class DeviceRepository(private val app: Context) {
     suspend fun read(): DeviceStatus = withContext(Dispatchers.IO) {
         val memory = ActivityManager.MemoryInfo()
         app.getSystemService(ActivityManager::class.java)?.getMemoryInfo(memory)
@@ -161,6 +166,7 @@ class DeviceRepository(private val app: Application) {
             }
         }
         val powerManager = app.getSystemService(android.os.PowerManager::class.java)
+        val batteryManager = app.getSystemService(BatteryManager::class.java)
         DeviceStatus(
             memoryTotalBytes = memory.totalMem,
             memoryAvailableBytes = memory.availMem,
@@ -176,7 +182,12 @@ class DeviceRepository(private val app: Application) {
                 ?.div(10f),
             batteryHealth = health,
             batteryOptimisationIgnored = powerManager?.isIgnoringBatteryOptimizations(app.packageName) == true,
-            measuredAtMillis = System.currentTimeMillis()
+            measuredAtMillis = System.currentTimeMillis(),
+            batteryCurrentMicroamps = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+                ?.takeUnless { it == Int.MIN_VALUE },
+            remainingChargeMicroampHours = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
+                ?.takeIf { it > 0 },
+            batterySaverEnabled = powerManager?.isPowerSaveMode == true
         )
     }
 
