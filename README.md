@@ -118,17 +118,15 @@ The Android launcher, splash screen, monochrome resource, onboarding, Home heade
 
 ## Build and CI
 
-The project is intentionally configured for GitHub Actions rather than a local APK build in this repository. `.github/workflows/android.yml`:
+[`.github/workflows/android.yml`](.github/workflows/android.yml) builds **only a signed release APK**. It runs on pushes to `main`, or manually from the **Actions** tab. It does not create a GitHub Release, tag, release notes, or a new version number. The app's required version metadata stays in `gradle.properties`.
 
-- Uses Java 17 and Gradle 8.9.
-- Runs JVM unit tests.
-- Assembles a debug APK.
-- Assembles a release APK.
-- Generates a temporary one-day PKCS12 keystore on the runner.
-- Uploads the release artifact.
-- Publishes a GitHub Release with the APK when a tag matching `v*` is pushed.
+The workflow installs Java 17, Gradle 8.9, Android SDK 35 and Build Tools 35.0.0, generates a temporary signing identity on the runner, runs `:app:assembleRelease`, verifies the APK signature, and uploads only `app-release.apk`. Debug builds and unit-test tasks are not part of this APK-only workflow.
 
-The temporary CI key is not a real distribution identity. Replace it with a securely stored long-lived signing key before publishing updates to an existing package. No keystore binary is committed, and changes are committed locally only; the repository is not pushed by the coding agent.
+**Download:** Open **Actions → Build release APK → a successful run → Artifacts → Auto-Optimiser-release-apk**. Extract the downloaded archive to get `app-release.apk`. Artifacts are kept for 14 days.
+
+**Signing:** No keystore binary is committed or uploaded. The temporary key is removed after each run, and its random password is masked in logs. Each run has a **different signing identity**, so its APK cannot update a previous run's installation in place. Uninstalling the old app erases its local settings and history; use a stable private signing key instead if preserving installed-app updates matters. The temporary certificate is valid for 10,000 days; this does not make the key a stable distribution identity.
+
+**Verification status:** Source and workflow checks are not a successful Android build. The next GitHub Actions run must pass before compilation and APK signing can be confirmed. No local build or push is performed by the coding agent.
 
 ## Developer
 

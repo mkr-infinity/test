@@ -1,11 +1,8 @@
-name: Android CI
+name: Build release APK
 
 on:
   push:
     branches: [main]
-    tags:
-      - 'v*'
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -13,79 +10,81 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    env:
-      CI_KEYSTORE_PATH: ${{ runner.temp }}/autooptimiser-release.keystore
-      CI_KEYSTORE_PASSWORD: autooptimiser-ci-password
-      CI_KEY_ALIAS: autooptimiser-ci
+    name: Signed release APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      - name: Check out repository
+      - name: Check out source
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
 
-      - name: Set up Gradle
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install required Android packages
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+
+      # This repository intentionally uses the Gradle installation provided by CI.
+      - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Generate temporary release keystore
-        shell: bash
+      # Temporary signing identity: new each run; not suitable for in-place updates.
+      # The certificate has a long validity so downloaded APKs do not expire in a day.
+      - name: Generate temporary signing key
         run: |
-          keytool -genkeypair -v \
+          set -euo pipefail
+          keystore="$RUNNER_TEMP/auto-optimiser-ci.p12"
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          keytool -genkeypair -noprompt \
             -storetype PKCS12 \
-            -keystore "$CI_KEYSTORE_PATH" \
-            -alias "$CI_KEY_ALIAS" \
+            -keystore "$keystore" \
+            -alias autooptimiser-ci \
             -keyalg RSA \
             -keysize 2048 \
-            -validity 1 \
-            -storepass "$CI_KEYSTORE_PASSWORD" \
-            -keypass "$CI_KEYSTORE_PASSWORD" \
-            -dname "CN=Auto Optimiser CI, OU=CI, O=MKR Infinity, L=CI, ST=CI, C=US"
+            -validity 10000 \
+            -storepass "$password" \
+            -keypass "$password" \
+            -dname 'CN=Auto Optimiser Temporary Build'
+          {
+            printf 'ORG_GRADLE_PROJECT_releaseStoreFile=%s\n' "$keystore"
+            printf 'ORG_GRADLE_PROJECT_releaseStorePassword=%s\n' "$password"
+            printf 'ORG_GRADLE_PROJECT_releaseKeyAlias=autooptimiser-ci\n'
+            printf 'ORG_GRADLE_PROJECT_releaseKeyPassword=%s\n' "$password"
+          } >> "$GITHUB_ENV"
 
-      - name: Run unit tests and assemble debug APK
-        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug
+      - name: Build signed release APK
+        run: gradle --no-daemon --console=plain --stacktrace :app:assembleRelease
 
-      - name: Assemble signed release APK
+      - name: Verify APK signature
         run: |
-          gradle --no-daemon --stacktrace \
-            -PreleaseStoreFile="$CI_KEYSTORE_PATH" \
-            -PreleaseStorePassword="$CI_KEYSTORE_PASSWORD" \
-            -PreleaseKeyAlias="$CI_KEY_ALIAS" \
-            -PreleaseKeyPassword="$CI_KEYSTORE_PASSWORD" \
-            assembleRelease
+          set -euo pipefail
+          apk='app/build/outputs/apk/release/app-release.apk'
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$apk"
 
-      - name: Upload release APK
+      - name: Upload APK for download
         uses: actions/upload-artifact@v4
         with:
-          name: autooptimiser-release
-          path: app/build/outputs/apk/release/*.apk
+          name: Auto-Optimiser-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+          compression-level: 0
           retention-days: 14
 
-  github-release:
-    name: Publish tagged GitHub Release
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download signed release APK
-        uses: actions/download-artifact@v4
-        with:
-          name: autooptimiser-release
-          path: release
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: release/*.apk
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/auto-optimiser-ci.p12"
