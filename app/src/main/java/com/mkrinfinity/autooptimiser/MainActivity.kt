@@ -6,11 +6,9 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -33,6 +31,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -107,7 +106,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -118,7 +116,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -152,6 +149,9 @@ import com.mkrinfinity.autooptimiser.data.AppRepository
 import com.mkrinfinity.autooptimiser.data.AppSort
 import com.mkrinfinity.autooptimiser.data.AppSelectionLogic
 import com.mkrinfinity.autooptimiser.data.DeviceRepository
+import com.mkrinfinity.autooptimiser.data.DeviceHistory
+import com.mkrinfinity.autooptimiser.data.DeviceObservation
+import com.mkrinfinity.autooptimiser.data.formatTimestamp
 import com.mkrinfinity.autooptimiser.data.DeviceStatus
 import com.mkrinfinity.autooptimiser.data.LastOptimisation
 import com.mkrinfinity.autooptimiser.data.PreferencesRepository
@@ -177,8 +177,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -186,11 +184,29 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AutoOptimiserViewModel by viewModels()
+    private var requestedRoute: String? by mutableStateOf(null)
+    private var routeRequest by mutableStateOf(0)
+
+    private fun readShortcut(intent: Intent?) {
+        requestedRoute = when (intent?.action) {
+            "com.mkrinfinity.autooptimiser.REVIEW_APPS" -> "apps"
+            "com.mkrinfinity.autooptimiser.REVIEW_FILES" -> "storage"
+            else -> null
+        }
+        routeRequest++
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readShortcut(intent)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        readShortcut(intent)
         setContent {
             val theme by viewModel.theme.collectAsStateWithLifecycle()
             AutoOptimiserTheme(darkTheme = when (theme) {
@@ -199,9 +215,16 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
             }) {
                 val onboardingComplete by viewModel.onboardingComplete.collectAsStateWithLifecycle()
-                if (onboardingComplete) AutoOptimiserShell(viewModel) else OnboardingFlow(viewModel)
+                if (onboardingComplete) AutoOptimiserShell(viewModel, requestedRoute, routeRequest) else com.mkrinfinity.autooptimiser.ui.OnboardingFlow(viewModel)
             }
         }
+    }
+
+    override fun onStop() {
+        viewModel.cancelAnalysis()
+        viewModel.cancelStorageScan()
+        viewModel.cancelDeletion()
+        super.onStop()
     }
 }
 
@@ -235,10 +258,19 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
     private val appRepository = AppRepository(application)
     private val deviceRepository = DeviceRepository(application)
     private val storageRepository = StorageRepository(context)
+    private val historyRepository = DeviceHistory(context)
+    private val mutableHistory = MutableStateFlow(historyRepository.read())
+    val batteryHistory: StateFlow<List<DeviceObservation>> = mutableHistory.asStateFlow()
+    private var appRefreshJob: Job? = null
     private val mutableApps = MutableStateFlow(AppUiState())
     private val mutableDevice = MutableStateFlow<DeviceStatus?>(null)
     private val mutableReport = MutableStateFlow<StorageReport?>(null)
     private val mutableStorageLoading = MutableStateFlow(false)
+    private val mutableDeleting = MutableStateFlow(false)
+    private val mutableStorageStatus = MutableStateFlow<String?>(null)
+    private var deleteJob: Job? = null
+    val deleting: StateFlow<Boolean> = mutableDeleting.asStateFlow()
+    val storageStatus: StateFlow<String?> = mutableStorageStatus.asStateFlow()
     private val mutableAnalysis = MutableStateFlow(AnalysisState())
     private var analysisJob: Job? = null
     private var storageScanJob: Job? = null
@@ -256,11 +288,13 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
     val progress: StateFlow<StopProgress> = mutableProgress.asStateFlow()
     val theme: StateFlow<ThemeMode> = prefs.theme
     val lastOptimisation get() = prefs.getLastOptimisation()
-    val selectedTreeUri get() = prefs.selectedTreeUri
+    val selectedTreeUri get() = prefs.selectedTreeUri?.takeIf { uri ->
+        context.contentResolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission && it.isWritePermission }
+    }
     val largeThresholdBytes get() = prefs.largeThresholdBytes
     val automaticOptimisation get() = prefs.automaticOptimisation
     val automaticFrequency get() = prefs.automaticFrequency
-    val confirmationRequired get() = prefs.confirmationRequired
+    val confirmationRequired get() = true
 
     init {
         refreshApps()
@@ -281,19 +315,37 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
 
     fun completeOnboarding() { prefs.setOnboardingComplete(true); mutableOnboarding.value = true }
     fun setTheme(value: ThemeMode) { prefs.setTheme(value) }
-    fun refreshDevice() { viewModelScope.launch { mutableDevice.value = deviceRepository.read() } }
+    fun refreshDevice() {
+        viewModelScope.launch {
+            try {
+                val snapshot = deviceRepository.read()
+                mutableDevice.value = snapshot
+                historyRepository.record(snapshot)
+                mutableHistory.value = historyRepository.read()
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { message("Android could not provide a device snapshot. Try Refresh again.", true) }
+        }
+    }
+    fun clearBatteryHistory() { historyRepository.clear(); mutableHistory.value = emptyList() }
+    fun openSystemScreen(action: String) { openIntent(Intent(action)) }
+    private fun openIntent(intent: Intent) {
+        try { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) { message("No Android activity is available for this action on your device.", true) }
+    }
     fun clearMessage() { mutableMessage.value = null }
     private fun message(text: String, error: Boolean = false) { mutableMessage.value = UiMessage(text, error) }
 
     fun refreshApps() {
         mutableApps.value = mutableApps.value.copy(loading = true)
-        viewModelScope.launch {
-            val protected = prefs.protectedPackages.associateWith { ProtectedApp(it, 0L, ProtectionReason.USER_SELECTED) }
-            val fresh = runCatching { appRepository.refresh(protected) }.getOrElse {
+        appRefreshJob?.cancel()
+        appRefreshJob = viewModelScope.launch {
+            val protections = prefs.protectedPackages.associateWith { ProtectedApp(it, 0L, ProtectionReason.USER_SELECTED) }
+            try {
+                val fresh = appRepository.refresh(protections)
+                val eligible = fresh.filterNot { it.isProtected }.map { it.packageName }.toSet()
+                mutableApps.value = mutableApps.value.copy(apps = fresh, selected = mutableApps.value.selected.intersect(eligible), loading = false)
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) {
                 message("Android did not allow reading the installed-app list.", true)
-                emptyList()
+                mutableApps.value = mutableApps.value.copy(loading = false)
             }
-            mutableApps.value = mutableApps.value.copy(apps = fresh, loading = false)
         }
     }
 
@@ -318,14 +370,14 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
     }
     fun openApp(packageName: String) {
         context.packageManager.getLaunchIntentForPackage(packageName)?.let {
-            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); context.startActivity(it)
+            openIntent(it)
         } ?: message("Android does not expose a launch action for this app.", true)
     }
     fun appInfo(packageName: String) {
-        context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        openIntent(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
     }
     fun uninstall(packageName: String) {
-        context.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        openIntent(Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName")))
     }
     fun filteredApps(): List<AppRecord> {
         val state = mutableApps.value
@@ -341,9 +393,7 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
                 val appCount = withContext(Dispatchers.Default) { mutableApps.value.apps.count { it.isRunning && !it.isProtected && !it.inventory.isSystemApp } }
                 mutableAnalysis.value = AnalysisState(running = true, stage = "Checking storage", candidates = appCount)
                 val report = selectedTreeUri?.let {
-                    try { storageRepository.scanTree(it, largeThresholdBytes) }
-                    catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { null }
+                    try { storageRepository.scanTree(it, largeThresholdBytes) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
                 }
                 mutableAnalysis.value = AnalysisState(running = true, stage = "Checking battery", candidates = appCount, storageBytes = report?.entries?.filter { it.sizeBytes >= largeThresholdBytes }?.sumOf { it.sizeBytes })
                 val status = deviceRepository.read()
@@ -354,7 +404,7 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
                     storageBytes = report?.entries?.filter { it.sizeBytes >= largeThresholdBytes }?.sumOf { it.sizeBytes },
                     batteryNote = status.batteryPercent?.let { "$it% reported by Android" } ?: "Battery level is not exposed on this device",
                     automaticOptimisation = prefs.automaticOptimisation,
-                    confirmationRequired = prefs.confirmationRequired
+                    confirmationRequired = true
                 )
                 if (report != null) mutableReport.value = report
             } finally {
@@ -369,20 +419,24 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
         if (mutableAnalysis.value.running) mutableAnalysis.value = mutableAnalysis.value.copy(running = false, stage = null)
     }
     fun scanStorage() {
+        if (mutableDeleting.value) { message("Finish or cancel deletion before scanning again."); return }
         val uri = selectedTreeUri ?: run { message("Choose a folder first. Auto Optimiser only scans folders you explicitly grant."); return }
         storageScanJob?.cancel()
         storageScanJob = viewModelScope.launch {
             mutableStorageLoading.value = true
+            mutableStorageStatus.value = "Scanning selected folder"
             try {
                 mutableReport.value = null
                 mutableReport.value = try {
                     storageRepository.scanTree(uri, largeThresholdBytes)
                 } catch (cancelled: CancellationException) {
+                    mutableStorageStatus.value = "Scan cancelled. No files were deleted."
                     throw cancelled
-                } catch (_: Exception) {
-                    message("The selected folder could not be scanned.", true)
+                } catch (failure: Exception) {
+                    mutableStorageStatus.value = failure.message ?: "The selected folder could not be scanned. Choose it again."
                     null
                 }
+                if (mutableReport.value != null) mutableStorageStatus.value = "Scan complete"
             } finally {
                 mutableStorageLoading.value = false
             }
@@ -394,16 +448,39 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
         mutableStorageLoading.value = false
     }
     fun saveTreeUri(uri: Uri) {
-        try { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) } catch (_: SecurityException) { }
-        prefs.setTreeUri(uri); scanStorage()
+        try {
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            prefs.setTreeUri(uri)
+        } catch (_: SecurityException) {
+            message("Android did not grant persistent read/write access. Choose a writable folder again.", true)
+        }
     }
     fun deleteStorage(entries: List<StorageEntry>) {
-        viewModelScope.launch {
-            val result = storageRepository.delete(entries)
-            val failures = result.count { !it.deleted }
-            message(if (failures == 0) "Deleted ${result.size} selected item${if (result.size == 1) "" else "s"}." else "$failures item${if (failures == 1) " was" else "s were"} not permitted by Android.", failures > 0)
-            scanStorage()
+        if (entries.isEmpty() || mutableDeleting.value) return
+        cancelStorageScan()
+        deleteJob = viewModelScope.launch {
+            mutableDeleting.value = true
+            try {
+                val result = storageRepository.delete(entries)
+                val deleted = result.filter { it.deleted }.map { it.entry.id }.toSet()
+                mutableReport.value = mutableReport.value?.let { it.copy(entries = it.entries.filterNot { entry -> entry.id in deleted }) }
+                val failureDetails = result.filterNot { it.deleted }.joinToString("\n") { "${it.entry.name}: ${it.message}" }
+                mutableStorageStatus.value = "Deleted ${deleted.size} files · ${formatBytes(result.sumOf { it.deletedBytes })}." +
+                    if (failureDetails.isBlank()) "" else "\n$failureDetails"
+            } catch (cancelled: CancellationException) {
+                mutableReport.value = null
+                mutableStorageStatus.value = "Deletion cancelled. Files already deleted cannot be restored. Scan again to see the current folder."
+                throw cancelled
+            } catch (failure: Exception) {
+                mutableReport.value = null
+                mutableStorageStatus.value = failure.message ?: "Deletion failed. Scan again to check the current folder."
+            } finally { mutableDeleting.value = false }
         }
+    }
+    fun cancelDeletion() { deleteJob?.cancel() }
+    fun openFile(entry: StorageEntry) {
+        openIntent(Intent(Intent.ACTION_VIEW).setDataAndType(entry.uri, entry.mimeType ?: "application/octet-stream")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
     }
 
     fun startOptimisation() {
@@ -417,6 +494,7 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
         startStopQueue(listOf(record))
     }
     private fun startStopQueue(records: List<AppRecord>) {
+        if (records.size > 20) { message("For safety, select no more than 20 apps per operation.", true); return }
         if (!isAccessibilityEnabled(context)) { message("Accessibility access is required for the supported multi-app stop workflow.", true); openAccessibilitySettings(); return }
         if (!StopSession.start(records.map { StopItem(it.packageName, it.label) })) {
             message("The automation service is not ready. Enable Auto Optimiser in Accessibility settings, then try again.", true)
@@ -424,14 +502,13 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
     }
     fun cancelOptimisation() { StopSession.cancel() }
     fun dismissOptimisationResult() { StopSession.set(StopProgress()) }
-    fun openAccessibilitySettings() { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    fun openAccessibilitySettings() { openIntent(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
 
     fun setAutomatic(value: Boolean) {
         prefs.setAutomatic(value)
         if (value) scheduleWorker() else WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
     }
     fun setFrequency(value: String) { prefs.setAutomaticFrequency(value); if (automaticOptimisation) scheduleWorker() }
-    fun setConfirmation(value: Boolean) { prefs.setConfirmationRequired(value) }
     fun setLargeThreshold(value: Long) { prefs.setLargeThresholdBytes(value) }
     private fun scheduleWorker() {
         val days = if (prefs.automaticFrequency == "daily") 1L else 7L
@@ -455,8 +532,9 @@ class AutoOptimiserViewModel(application: Application) : AndroidViewModel(applic
 private data class NavItem(val route: String, val label: String, val icon: ImageVector)
 
 @Composable
-private fun AutoOptimiserShell(vm: AutoOptimiserViewModel) {
+private fun AutoOptimiserShell(vm: AutoOptimiserViewModel, requestedRoute: String?, requestId: Int) {
     val navController = rememberNavController()
+    LaunchedEffect(requestId) { requestedRoute?.let { target -> navController.navigate(target) { launchSingleTop = true } } }
     val message by vm.message.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it.text); vm.clearMessage() } }
@@ -486,6 +564,7 @@ private fun AutoOptimiserShell(vm: AutoOptimiserViewModel) {
             composable("battery") { BatteryScreen(vm) }
             composable("settings") { SettingsScreen(vm, navController) }
             composable("about") { AboutScreen(navController) }
+            composable("device") { com.mkrinfinity.autooptimiser.ui.DeviceScreen(vm) }
             composable("app/{packageName}") { back -> back.arguments?.getString("packageName")?.let { AppDetailScreen(vm, it, navController) } }
         }
     }
@@ -496,7 +575,7 @@ private fun AutoOptimiserShell(vm: AutoOptimiserViewModel) {
 @Composable
 private fun BrandHeader(modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Image(painterResource(com.mkrinfinity.autooptimiser.R.drawable.ic_brand), null, Modifier.size(32.dp))
+        Image(painterResource(com.mkrinfinity.autooptimiser.R.drawable.ic_brand), "Auto Optimiser logo", Modifier.size(48.dp))
         Spacer(Modifier.width(10.dp))
         Column {
             Text("AUTO OPTIMISER", style = MaterialTheme.typography.labelMedium, letterSpacing = 1.5.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
@@ -540,7 +619,7 @@ private fun HomeScreen(vm: AutoOptimiserViewModel, nav: NavHostController) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 QuickAction("Storage", Icons.Outlined.Storage, Modifier.weight(1f)) { nav.navigate("storage") }
                 QuickAction("Battery", Icons.Outlined.BatteryChargingFull, Modifier.weight(1f)) { nav.navigate("battery") }
-                Spacer(Modifier.weight(1f))
+                QuickAction("Device", Icons.Outlined.Memory, Modifier.weight(1f)) { nav.navigate("device") }
             }
         }
         item { SectionLabel("Last optimisation") }
@@ -563,7 +642,7 @@ private fun DeviceStatusPanel(status: DeviceStatus?, refresh: () -> Unit) {
                     StatusMetric("Memory", "${status.memoryUsedPercent}% used", Icons.Outlined.Memory, Modifier.weight(1f))
                     StatusMetric("Battery", status.batteryPercent?.let { "$it%" } ?: "Not exposed", Icons.Outlined.BatteryStd, Modifier.weight(1f))
                 }
-                Text("Measured just now · free memory is not a performance score.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Measured ${formatTimestamp(status.measuredAtMillis)} · free memory is not a performance score.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -597,20 +676,24 @@ private fun AnalysisResult(analysis: AnalysisState) { Card(colors = CardDefaults
 @Composable
 private fun AppsScreen(vm: AutoOptimiserViewModel, nav: NavHostController) {
     val state by vm.apps.collectAsStateWithLifecycle()
-    val apps = vm.filteredApps()
+    val apps = remember(state.apps, state.query, state.filter, state.sort) { vm.filteredApps() }
     var showConfirm by rememberSaveable { mutableStateOf(false) }
     var sortMenu by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize()) {
     LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { Text("Android restricts visibility of other apps' running processes. Unobserved does not mean stopped. Queues are limited to 20 apps.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column { Text("Applications", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold); Text("${state.selected.size} selected · ${state.apps.size} discovered", color = MaterialTheme.colorScheme.onSurfaceVariant) }; IconButton(vm::refreshApps) { Icon(Icons.Outlined.Refresh, "Refresh applications") } } }
         item { SearchField(state.query, vm::setQuery) }
         item { FilterRow(state.filter, vm::setFilter) }
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text("Sort", style = MaterialTheme.typography.labelLarge); Box { TextButton(onClick = { sortMenu = true }) { Text(state.sort.name.lowercase().replaceFirstChar { it.uppercase() }); Icon(Icons.Outlined.ArrowDropDown, null) }; DropdownMenu(sortMenu, { sortMenu = false }) { AppSort.values().forEach { DropdownMenuItem(text = { Text(it.name.lowercase().replaceFirstChar { c -> c.uppercase() }) }, onClick = { vm.setSort(it); sortMenu = false }) } } }; TextButton(onClick = vm::selectAllEligible) { Text("Select all eligible") }; TextButton(onClick = vm::clearSelection) { Text("Clear") } } }
         if (state.loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        if (!state.loading && apps.isEmpty()) item { Text("No applications match this view.", modifier = Modifier.padding(vertical = 20.dp)) }
         items(apps, key = { it.packageName }) { record -> AppRow(record, state.selected.contains(record.packageName), { vm.toggleSelection(record.packageName) }, { nav.navigate("app/${Uri.encode(record.packageName)}") }) }
         item { Spacer(Modifier.height(82.dp)) }
     }
     if (state.selected.isNotEmpty()) {
-        Surface(Modifier.fillMaxWidth().padding(12.dp), tonalElevation = 4.dp, shape = RoundedCornerShape(16.dp)) { Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) { Text("${state.selected.size} eligible selected", fontWeight = FontWeight.SemiBold); Button(onClick = { if (vm.confirmationRequired) showConfirm = true else vm.startOptimisation() }) { Icon(Icons.Outlined.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Optimise") } } }
+        Surface(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(12.dp), tonalElevation = 4.dp, shape = RoundedCornerShape(16.dp)) { Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) { Text("${state.selected.size} eligible selected", fontWeight = FontWeight.SemiBold); Button(onClick = { showConfirm = true }) { Icon(Icons.Outlined.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Optimise") } } }
+    }
     }
     if (showConfirm) AlertDialog(onDismissRequest = { showConfirm = false }, icon = { Icon(Icons.Outlined.Security, null) }, title = { Text("Optimise ${state.selected.size} applications?") }, text = { Text("Auto Optimiser will open Android App Info and use Accessibility to perform the supported stop workflow. Protected apps will not be touched.") }, confirmButton = { Button(onClick = { showConfirm = false; vm.startOptimisation() }) { Text("Start optimisation") } }, dismissButton = { TextButton(onClick = { showConfirm = false }) { Text("Cancel") } })
 }
@@ -630,7 +713,11 @@ private fun AppRow(record: AppRecord, selected: Boolean, onToggle: () -> Unit, o
     }
 }
 
-@Composable private fun LabelChip(text: String) { AssistChip(onClick = {}, enabled = false, label = { Text(text, style = MaterialTheme.typography.labelSmall) }) }
+@Composable private fun LabelChip(text: String) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(4.dp)) {
+        Text(text, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp), style = MaterialTheme.typography.labelSmall)
+    }
+}
 @Composable private fun AppIcon(drawable: Drawable, label: String, size: androidx.compose.ui.unit.Dp = 48.dp) { val bitmap = remember(drawable) { drawable.toBitmap(size.value.toInt().coerceAtLeast(1)) }; Image(bitmap.asImageBitmap(), contentDescription = "$label icon", modifier = Modifier.size(size).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Fit) }
 private fun Drawable.toBitmap(size: Int): Bitmap { val bitmap = Bitmap.createBitmap(size * 2, size * 2, Bitmap.Config.ARGB_8888); val canvas = Canvas(bitmap); setBounds(0, 0, canvas.width, canvas.height); draw(canvas); return bitmap }
 
@@ -645,7 +732,7 @@ private fun AppDetailScreen(vm: AutoOptimiserViewModel, packageName: String, nav
             item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ vm.openApp(packageName) }, Modifier.weight(1f), enabled = record.inventory.isLaunchable) { Text("Open") }; OutlinedButton({ vm.appInfo(packageName) }, Modifier.weight(1f)) { Text("App Info") } } }
             item { Button({ stopConfirm = true }, Modifier.fillMaxWidth(), enabled = !record.isProtected) { Icon(Icons.Outlined.Tune, null); Spacer(Modifier.width(6.dp)); Text("Stop app") } }
             item { OutlinedButton({ vm.uninstall(packageName) }, Modifier.fillMaxWidth(), enabled = packageName != "com.mkrinfinity.autooptimiser") { Icon(Icons.Outlined.DeleteOutline, null); Spacer(Modifier.width(6.dp)); Text("Uninstall through Android") } }
-            item { val userCanToggle = record.protectionReason == null || record.protectionReason == ProtectionReason.USER_SELECTED; Button({ vm.protect(packageName, !record.isProtected) }, Modifier.fillMaxWidth(), enabled = userCanToggle, colors = ButtonDefaults.buttonColors(containerColor = if (record.isProtected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary)) { Icon(Icons.Outlined.Shield, null); Spacer(Modifier.width(6.dp)); Text(if (!userCanToggle) "Protected by Android" else if (record.isProtected) "Remove protection" else "Protect this app") } }
+            item { val userCanToggle = record.protectionReason == null || record.protectionReason == ProtectionReason.USER_SELECTED; Button({ vm.protect(packageName, !record.isProtected) }, Modifier.fillMaxWidth(), enabled = userCanToggle, colors = ButtonDefaults.buttonColors(containerColor = if (record.isProtected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary)) { Icon(Icons.Outlined.Shield, null); Spacer(Modifier.width(6.dp)); Text(if (!userCanToggle) "Protected by safety policy" else if (record.isProtected) "Remove protection" else "Protect this app") } }
             item { Text("Stopping an app is only available through Android's App Info workflow. Cache and private data remain untouched.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
@@ -653,53 +740,111 @@ private fun AppDetailScreen(vm: AutoOptimiserViewModel, packageName: String, nav
 }
 
 @Composable private fun DetailFacts(record: AppRecord) { Card(shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { FactRow("Version", record.inventory.versionName ?: "Not exposed"); FactRow("Version code", record.inventory.versionCode.toString()); FactRow("APK size", record.inventory.sizeBytes?.let(::formatBytes) ?: "Not exposed"); FactRow("State", if (record.isRunning) "Running" else "Not observed running"); FactRow("Protection", record.protectionReason?.name?.lowercase()?.replace('_', ' ') ?: "Not protected") } } }
-@Composable private fun FactRow(label: String, value: String) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(value, fontWeight = FontWeight.Medium, textAlign = androidx.compose.ui.text.style.TextAlign.End) } }
+@Composable private fun FactRow(label: String, value: String) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant); Text(value, Modifier.weight(1f), fontWeight = FontWeight.Medium, textAlign = androidx.compose.ui.text.style.TextAlign.End) } }
 
 @Composable
 private fun StorageScreen(vm: AutoOptimiserViewModel) {
-    DisposableEffect(Unit) { onDispose { vm.cancelStorageScan() } }
+    DisposableEffect(Unit) { onDispose { vm.cancelStorageScan(); vm.cancelDeletion() } }
     val report by vm.storageReport.collectAsStateWithLifecycle()
     val loading by vm.storageLoading.collectAsStateWithLifecycle()
+    val deleting by vm.deleting.collectAsStateWithLifecycle()
+    val operationStatus by vm.storageStatus.collectAsStateWithLifecycle()
     var selected by remember { mutableStateOf(setOf<String>()) }
     var category by rememberSaveable { mutableStateOf<StorageCategory?>(null) }
     var deleteConfirm by remember { mutableStateOf(false) }
-    val treeLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(vm::saveTreeUri) }
-    val entries = report?.entries.orEmpty().filter { category == null || it.category == category }
+    val treeLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let { vm.saveTreeUri(it); vm.scanStorage() } }
+    val entries = report?.entries.orEmpty().filter { category == null || it.matchesCategory(category!!) }
+    val deletionTargets = report?.entries.orEmpty().filter { it.id in selected && !it.isDuplicateCanonical }
+    LaunchedEffect(report) { selected = selected.intersect(report?.entries.orEmpty().map { it.id }.toSet()) }
     Scaffold(topBar = { TopAppBar(title = { Text("Deep clean") }, actions = { IconButton(vm::scanStorage) { Icon(Icons.Outlined.Refresh, "Rescan") } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)) }) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Text("Only folders you grant are scanned. Nothing is deleted without your confirmation.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             item { OutlinedButton({ treeLauncher.launch(vm.selectedTreeUri) }, Modifier.fillMaxWidth()) { Icon(Icons.Outlined.FolderOpen, null); Spacer(Modifier.width(8.dp)); Text(if (vm.selectedTreeUri == null) "Choose a folder to scan" else "Change scanned folder") } }
-            if (loading) item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("Scanning the selected folder…", fontWeight = FontWeight.SemiBold); LinearProgressIndicator(Modifier.fillMaxWidth()) } }
+            operationStatus?.let { text -> item { Text(text, style = MaterialTheme.typography.bodySmall) } }
+            if (loading || deleting) item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (deleting) "Deleting confirmed files…" else "Scanning selected folder…", fontWeight = FontWeight.SemiBold)
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    TextButton({ if (deleting) vm.cancelDeletion() else vm.cancelStorageScan() }) { Text("Cancel") }
+                }
+            }
             report?.let { r ->
                 item { StorageSummary(r) }
                 item { CategoryRow(r, category) { category = it } }
-                item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("${entries.size} files", fontWeight = FontWeight.SemiBold); TextButton(onClick = { selected = entries.map { it.id }.toSet() }) { Text("Select visible") } } }
-                items(entries, key = { it.id }) { entry -> StorageEntryRow(entry, selected.contains(entry.id)) { selected = selected.toMutableSet().apply { if (!add(entry.id)) remove(entry.id) } } }
-                if (selected.isNotEmpty()) item { Button({ deleteConfirm = true }, Modifier.fillMaxWidth()) { Icon(Icons.Outlined.DeleteOutline, null); Spacer(Modifier.width(8.dp)); Text("Delete ${selected.size} selected") } }
+                item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("${entries.size} files", fontWeight = FontWeight.SemiBold); TextButton(onClick = { selected = entries.filterNot { it.isDuplicateCanonical }.map { it.id }.toSet() }) { Text("Select visible") } } }
+                items(entries, key = { it.id }) { entry -> StorageEntryRow(entry, selected.contains(entry.id), { vm.openFile(entry) }) { selected = selected.toMutableSet().apply { if (!add(entry.id)) remove(entry.id) } } }
+                if (deletionTargets.isNotEmpty()) item { Button({ deleteConfirm = true }, Modifier.fillMaxWidth(), enabled = !deleting && !loading) { Icon(Icons.Outlined.DeleteOutline, null); Spacer(Modifier.width(8.dp)); Text("Delete ${selected.size} selected") } }
             } ?: if (!loading) { item { EmptyStorage() } } else Unit
         }
     }
-    if (deleteConfirm) AlertDialog(onDismissRequest = { deleteConfirm = false }, icon = { Icon(Icons.Outlined.DeleteOutline, null) }, title = { Text("Delete selected files?") }, text = { Text("Android will delete these real files from the folder you granted. This cannot be undone.") }, confirmButton = { Button({ deleteConfirm = false; vm.deleteStorage(entries.filter { selected.contains(it.id) }); selected = emptySet() }) { Text("Delete") } }, dismissButton = { TextButton({ deleteConfirm = false }) { Text("Cancel") } })
+    if (deleteConfirm) AlertDialog(
+        onDismissRequest = { deleteConfirm = false },
+        title = { Text("Delete ${deletionTargets.size} files?") },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 340.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                item { Text("${formatBytes(deletionTargets.sumOf { it.sizeBytes })} selected. Deletion cannot be undone. Retained duplicate originals are excluded.") }
+                items(deletionTargets, key = { it.id }) { entry ->
+                    Column { Text(entry.name, fontWeight = FontWeight.SemiBold); Text(entry.path); Text("${formatBytes(entry.sizeBytes)} · ${entry.category.label}", style = MaterialTheme.typography.bodySmall) }
+                }
+            }
+        },
+        confirmButton = { Button({ deleteConfirm = false; vm.deleteStorage(deletionTargets); selected = emptySet() }, enabled = deletionTargets.isNotEmpty()) { Text("Delete permanently") } },
+        dismissButton = { TextButton({ deleteConfirm = false }) { Text("Cancel") } }
+    )
 }
 
 @Composable private fun EmptyStorage() { Card(shape = RoundedCornerShape(16.dp)) { Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) { Icon(Icons.Outlined.FolderOpen, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary); Text("No folder scanned", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("Choose Downloads or another folder. Auto Optimiser cannot access other apps' private data.", color = MaterialTheme.colorScheme.onSurfaceVariant) } } }
-@Composable private fun StorageSummary(report: StorageReport) { Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) { Text(report.rootName, fontWeight = FontWeight.SemiBold); Text("${report.entries.size} files · ${formatBytes(report.totalBytes)} indexed"); if (report.skippedCount > 0) Text("${report.skippedCount} folders could not be read by Android.", color = WarningColor, style = MaterialTheme.typography.bodySmall) } } }
-@Composable private fun CategoryRow(report: StorageReport, current: StorageCategory?, onPick: (StorageCategory?) -> Unit) { androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) { item { FilterChip(current == null, { onPick(null) }, label = { Text("All") }) }; StorageCategory.values().forEach { c -> if (report.entries.any { it.category == c }) item { FilterChip(current == c, { onPick(c) }, label = { Text(c.label) }) } } } }
-@Composable private fun StorageEntryRow(entry: StorageEntry, selected: Boolean, onToggle: () -> Unit) { Card(shape = RoundedCornerShape(14.dp)) { Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(selected, { onToggle() }); Column(Modifier.weight(1f)) { Text(entry.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium); Text(entry.category.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary); Text(formatBytes(entry.sizeBytes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Icon(Icons.Outlined.Description, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } } }
+@Composable private fun StorageSummary(report: StorageReport) { Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) { Text(report.rootName, fontWeight = FontWeight.SemiBold); Text("${report.entries.size} files · ${formatBytes(report.totalBytes)} indexed"); report.limitations.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } } } }
+@Composable private fun CategoryRow(report: StorageReport, current: StorageCategory?, onPick: (StorageCategory?) -> Unit) { androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) { item { FilterChip(current == null, { onPick(null) }, label = { Text("All") }) }; StorageCategory.values().forEach { c -> if (report.entries.any { it.matchesCategory(c) }) item { FilterChip(current == c, { onPick(c) }, label = { Text(c.label) }) } } } }
+@Composable private fun StorageEntryRow(entry: StorageEntry, selected: Boolean, onOpen: () -> Unit, onToggle: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(selected, { onToggle() }, enabled = !entry.isDuplicateCanonical)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(entry.name, fontWeight = FontWeight.Medium)
+            Text(entry.path, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${formatBytes(entry.sizeBytes)} · ${if (entry.isDuplicateCanonical) "Retained original" else entry.category.label}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
+        IconButton(onOpen) { Icon(Icons.Outlined.OpenInNew, "Open ${entry.name}") }
+    }
+}
 
 @Composable
 private fun BatteryScreen(vm: AutoOptimiserViewModel) {
     val status by vm.device.collectAsStateWithLifecycle()
+    val history by vm.batteryHistory.collectAsStateWithLifecycle()
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Text("Battery", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold) }
         item { BatteryHero(status) }
         item { if (status != null) BatteryFacts(status!!) else LinearProgressIndicator(Modifier.fillMaxWidth()) }
         item { Card(shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("What Android exposes", fontWeight = FontWeight.SemiBold); Text("Auto Optimiser reports the battery data Android makes available. It cannot increase battery capacity or promise a battery boost.", color = MaterialTheme.colorScheme.onSurfaceVariant); Text("Per-app battery usage is a system surface and is not exposed to ordinary apps on every Android release.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } } }
+        item { OutlinedButton({ vm.openSystemScreen(Settings.ACTION_BATTERY_SAVER_SETTINGS) }, Modifier.fillMaxWidth()) { Text("Open Android Battery Saver") } }
+        item { OutlinedButton({ vm.openSystemScreen(Intent.ACTION_POWER_USAGE_SUMMARY) }, Modifier.fillMaxWidth()) { Text("Open Android battery usage") } }
         item { OutlinedButton(vm::refreshDevice, Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Refresh, null); Spacer(Modifier.width(6.dp)); Text("Refresh snapshot") } }
+        item { SectionLabel("Recorded observations") }
+        item { Text("Up to 48 local observations from manual refreshes or scheduled checks. Gaps are not filled in; this is not continuous charging history or a charging-speed estimate.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (history.isEmpty()) item { Text("No battery observations saved.") }
+        items(history, key = { it.atMillis }) { sample ->
+            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(formatTimestamp(sample.atMillis), style = MaterialTheme.typography.labelMedium)
+                Text("${sample.batteryPercent?.let { "$it%" } ?: "Level unavailable"} · ${if (sample.charging) "Charging" else "Not charging"}")
+                Divider()
+            }
+        }
+        if (history.isNotEmpty()) item { TextButton(vm::clearBatteryHistory) { Text("Clear local observations") } }
     }
 }
 @Composable private fun BatteryHero(status: DeviceStatus?) { Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer), shape = RoundedCornerShape(20.dp)) { Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) { Icon(if (status?.isCharging == true) Icons.Outlined.BatteryChargingFull else Icons.Outlined.BatteryStd, null, Modifier.size(54.dp), tint = CopperColor); Spacer(Modifier.width(16.dp)); Column { Text(status?.batteryPercent?.let { "$it%" } ?: "Unavailable", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold); Text(if (status?.isCharging == true) "Charging" else "Not charging", color = MaterialTheme.colorScheme.onSurfaceVariant) } } } }
-@Composable private fun BatteryFacts(status: DeviceStatus) { Card(shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { FactRow("Temperature", status.batteryTemperatureCelsius?.let { "%.1f °C".format(it) } ?: "Not exposed"); FactRow("Health", status.batteryHealth ?: "Not exposed"); FactRow("Battery optimisation", if (status.batteryOptimisationIgnored) "Not restricted" else "System-managed") } } }
+@Composable private fun BatteryFacts(status: DeviceStatus) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        FactRow("Temperature", status.batteryTemperatureCelsius?.let { "%.1f °C".format(it) } ?: "Not exposed")
+        FactRow("Health flag", status.batteryHealth ?: "Not exposed")
+        FactRow("Battery Saver", if (status.batterySaverEnabled) "On" else "Off")
+        FactRow("Auto Optimiser battery policy", if (status.batteryOptimisationIgnored) "Unrestricted" else "System-managed")
+        FactRow("Current now", status.batteryCurrentMicroamps?.let { "%.0f mA".format(it / 1000.0) } ?: "Not exposed")
+        FactRow("Remaining charge", status.remainingChargeMicroampHours?.let { "%.0f mAh".format(it / 1000.0) } ?: "Not exposed")
+        Text("Current is the instantaneous signed sensor reading, not charger speed. Remaining charge is not full capacity. Battery capacity/degradation estimation is not implemented.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
 
 @Composable
 private fun SettingsScreen(vm: AutoOptimiserViewModel, nav: NavHostController) {
@@ -709,14 +854,42 @@ private fun SettingsScreen(vm: AutoOptimiserViewModel, nav: NavHostController) {
     var thresholdMenu by remember { mutableStateOf(false) }
     var threshold by remember { mutableStateOf(vm.largeThresholdBytes) }
     var automatic by remember { mutableStateOf(vm.automaticOptimisation) }
-    var confirmation by remember { mutableStateOf(vm.confirmationRequired) }
+    var frequency by remember { mutableStateOf(vm.automaticFrequency) }
+    val settingsContext = LocalContext.current
+    var accessibilityEnabled by remember { mutableStateOf(AutoOptimiserViewModel.isAccessibilityEnabled(settingsContext)) }
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        accessibilityEnabled = AutoOptimiserViewModel.isAccessibilityEnabled(settingsContext)
+    }
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold) }
         item { SettingsSection("Appearance", Icons.Outlined.Palette) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text("Theme"); Box { TextButton({ themeMenu = true }) { Text(theme.name.lowercase().replaceFirstChar { it.uppercase() }); Icon(Icons.Outlined.ArrowDropDown, null) }; DropdownMenu(themeMenu, { themeMenu = false }) { ThemeMode.values().forEach { mode -> DropdownMenuItem(text = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }, onClick = { vm.setTheme(mode); themeMenu = false }) } } } } } }
-        item { SettingsSection("Optimisation", Icons.Outlined.Tune) { ToggleRow("Automatic optimisation", "Runs a lightweight check with WorkManager; it does not stop apps in the background.", automatic) { automatic = it; vm.setAutomatic(it) }; Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Schedule"); Text("${vm.automaticFrequency.replaceFirstChar { it.uppercase() }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Box { IconButton({ frequencyMenu = true }) { Icon(Icons.Outlined.MoreVert, "Choose schedule") }; DropdownMenu(frequencyMenu, { frequencyMenu = false }) { listOf("daily", "weekly").forEach { DropdownMenuItem(text = { Text(it.replaceFirstChar { c -> c.uppercase() }) }, onClick = { vm.setFrequency(it); frequencyMenu = false }) } } } } ; ToggleRow("Require confirmation", "Review the queue before opening Android App Info.", confirmation) { confirmation = it; vm.setConfirmation(it) }; TextButton({ nav.navigate("apps") }) { Icon(Icons.Outlined.Shield, null); Spacer(Modifier.width(6.dp)); Text("Manage protected apps") } } }
+        item {
+            SettingsSection("Optimisation", Icons.Outlined.Tune) {
+                ToggleRow("Scheduled analysis", "Saves a device observation with WorkManager. Never stops apps or deletes files in the background.", automatic) { automatic = it; vm.setAutomatic(it) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Schedule · ${frequency.replaceFirstChar { it.uppercase() }}")
+                    Box {
+                        IconButton({ frequencyMenu = true }) { Icon(Icons.Outlined.MoreVert, "Choose schedule") }
+                        DropdownMenu(frequencyMenu, { frequencyMenu = false }) {
+                            listOf("daily", "weekly").forEach { option ->
+                                DropdownMenuItem(text = { Text(option.replaceFirstChar { it.uppercase() }) }, onClick = { frequency = option; vm.setFrequency(option); frequencyMenu = false })
+                            }
+                        }
+                    }
+                }
+                Text("Android may defer scheduled work. The resulting observations appear in Battery. Confirmation is always required for stopping apps and deleting files.", style = MaterialTheme.typography.bodySmall)
+                TextButton({ vm.setFilter(AppFilter.PROTECTED); nav.navigate("apps") }) { Text("Manage protected apps") }
+            }
+        }
         item { SettingsSection("Cleaning", Icons.Outlined.CleaningServices) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Large-file threshold"); Text("Files at or above this size are marked Large files.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Box { TextButton({ thresholdMenu = true }) { Text(formatBytes(threshold)); Icon(Icons.Outlined.ArrowDropDown, null) }; DropdownMenu(thresholdMenu, { thresholdMenu = false }) { listOf(100L * 1024 * 1024, 500L * 1024 * 1024, 1024L * 1024 * 1024).forEach { size -> DropdownMenuItem(text = { Text(formatBytes(size)) }, onClick = { threshold = size; vm.setLargeThreshold(size); thresholdMenu = false }) } } } } } }
-        item { SettingsSection("Accessibility", Icons.Outlined.Accessibility) { val enabled = AutoOptimiserViewModel.isAccessibilityEnabled(LocalContext.current); Text(if (enabled) "Enabled · used only during a queue you start" else "Disabled · required for multi-app stop automation", color = if (enabled) SuccessColor else WarningColor); OutlinedButton(vm::openAccessibilitySettings, Modifier.fillMaxWidth()) { Text("Open Accessibility settings") } } }
+        item { SettingsSection("Accessibility", Icons.Outlined.Accessibility) { val enabled = accessibilityEnabled; Text(if (enabled) "Enabled · used only during a queue you start" else "Disabled · required for multi-app stop automation", color = if (enabled) SuccessColor else WarningColor); OutlinedButton(vm::openAccessibilitySettings, Modifier.fillMaxWidth()) { Text("Open Accessibility settings") } } }
         item { SettingsSection("Privacy", Icons.Outlined.Security) { Text("Device data is processed locally. Auto Optimiser does not collect accounts, contacts, location, messages, or private app data.", color = MaterialTheme.colorScheme.onSurfaceVariant); Text("Folder scans use Android's Storage Access Framework and only include folders you choose.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { SettingsSection("Supported workflows", Icons.Outlined.Info) {
+            Text("Game boosting, silent hidden-cache/history clearing, Home-button interception, screen-off stopping and memory-pressure triggers are not implemented. No speed or battery-saving percentage is promised.")
+            Text("Stop automation uses strict English App Info semantics, with at most 20 apps and a two-minute session limit. Unsupported layouts safely skip rather than guessing.", style = MaterialTheme.typography.bodySmall)
+            OutlinedButton({ vm.openSystemScreen(Settings.ACTION_INTERNAL_STORAGE_SETTINGS) }, Modifier.fillMaxWidth()) { Text("Android storage management") }
+            TextButton({ nav.navigate("device") }) { Text("Memory, CPU scope and device information") }
+        } }
         item { SettingsSection("About", Icons.Outlined.Info) { Text("Auto Optimiser", fontWeight = FontWeight.SemiBold); Text("A local, explainable device utility.", color = MaterialTheme.colorScheme.onSurfaceVariant); TextButton({ nav.navigate("about") }) { Text("About and support") } } }
     }
 }
@@ -728,6 +901,7 @@ private fun AboutScreen(nav: NavHostController) {
     val context = LocalContext.current
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { TopAppBar(title = { Text("About") }, navigationIcon = { IconButton({ nav.popBackStack() }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent), scrollBehavior = null) }
+        item { BrandHeader() }
         item { DeveloperBlock() }
         item { Card(shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) { Text("Build information", fontWeight = FontWeight.SemiBold); FactRow("Application", "Auto Optimiser"); FactRow("Version", BuildConfig.VERSION_NAME); FactRow("Version code", BuildConfig.VERSION_CODE.toString()); FactRow("Build type", BuildConfig.BUILD_TYPE) } } }
         item { LinkButton("GitHub", "github.com/mkr-infinity", "https://github.com/mkr-infinity", context); LinkButton("Instagram", "instagram.com/mkr_infinity", "https://www.instagram.com/mkr_infinity", context); LinkButton("Telegram", "t.me/mkr_infinity", "https://t.me/mkr_infinity", context); LinkButton("Website", "mkr-infinity.github.io", "https://mkr-infinity.github.io", context) }
@@ -740,43 +914,12 @@ private fun DeveloperBlock() { Row(Modifier.fillMaxWidth(), verticalAlignment = 
 
 @Composable
 private fun GithubAvatar() {
-    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-    LaunchedEffect(Unit) { bitmap = withContext(Dispatchers.IO) { runCatching { (URL("https://github.com/mkr-infinity.png").openConnection() as HttpURLConnection).apply { connectTimeout = 2500; readTimeout = 2500 }.inputStream.use(BitmapFactory::decodeStream) }.getOrNull() } }
-    if (bitmap != null) Image(bitmap!!.asImageBitmap(), "Mohammad Kaif Raja GitHub avatar", Modifier.size(70.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-    else Surface(Modifier.size(70.dp), CircleShape, color = MaterialTheme.colorScheme.primary) { Box(contentAlignment = Alignment.Center) { Text("MK", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold) } }
+    Image(painterResource(R.drawable.developer_avatar), "Mohammad Kaif Raja GitHub avatar", Modifier.size(70.dp).clip(CircleShape), contentScale = ContentScale.Crop)
 }
 @Composable private fun LinkButton(label: String, visible: String, url: String, context: Context) { OutlinedButton({ openUrl(context, url) }, Modifier.fillMaxWidth()) { Icon(Icons.Outlined.OpenInNew, null); Spacer(Modifier.width(8.dp)); Text("$label · $visible") } }
-private fun openUrl(context: Context, url: String) { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
-
-@Composable
-private fun OnboardingFlow(vm: AutoOptimiserViewModel) {
-    val context = LocalContext.current
-    var page by rememberSaveable { mutableStateOf(0) }
-    val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(vm::saveTreeUri) }
-    val accessibilityEnabled = AutoOptimiserViewModel.isAccessibilityEnabled(context)
-    val pages = listOf("Welcome", "Accessibility", "Storage & files", "Notifications", "Automation", "Ready")
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(horizontal = 24.dp, vertical = 26.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Image(painterResource(R.drawable.ic_brand), null, Modifier.size(42.dp)); Text("${page + 1} / ${pages.size}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        Spacer(Modifier.height(34.dp))
-        LinearProgressIndicator({ (page + 1f) / pages.size }, Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(32.dp))
-        when (page) {
-            0 -> OnboardingWelcome()
-            1 -> PermissionPage(Icons.Outlined.Accessibility, "Accessibility, only when you ask", "Auto Optimiser uses Accessibility access to automate repetitive navigation through Android App Info screens when you choose to optimise multiple applications.", "It does not continuously monitor your personal content and stays idle until a queue is started.", if (accessibilityEnabled) "Enabled" else "Open Accessibility settings", { if (!accessibilityEnabled) vm.openAccessibilitySettings() else page++ }, accessibilityEnabled)
-            2 -> PermissionPage(Icons.Outlined.FolderOpen, "Files you choose", "Choose a folder such as Downloads when you want to inspect large files, duplicates, media, APKs, and archives.", "Auto Optimiser cannot read other apps' private data and will not scan folders you did not grant.", if (vm.selectedTreeUri == null) "Choose a folder" else "Folder selected", { if (vm.selectedTreeUri == null) folderLauncher.launch(null) else page++ }, vm.selectedTreeUri != null)
-            3 -> PermissionPage(Icons.Outlined.Description, "Notifications are optional", "The core app does not require notification access. Android may show its own confirmation UI for system actions.", "Auto Optimiser does not read your notifications or messages.", "Continue without notifications", { page++ }, true)
-            4 -> PermissionPage(Icons.Outlined.Tune, "Automation stays lightweight", "Optional automatic optimisation schedules a quick device check with WorkManager. It does not continuously poll or silently stop apps.", "Deep scans and app stopping always require an action you start in the app.", "Continue", { page++ }, true)
-            5 -> ReadyPage(vm, accessibilityEnabled, { page = 1 }, { page = 2 }, { vm.completeOnboarding() })
-        }
-        Spacer(Modifier.weight(1f))
-        if (page > 0 && page < 5) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { TextButton({ page-- }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null); Spacer(Modifier.width(5.dp)); Text("Back") }; TextButton({ page++ }) { Text("Skip"); Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) } }
-    }
+private fun openUrl(context: Context, url: String) {
+    try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) { android.widget.Toast.makeText(context, "No browser is available to open this link.", android.widget.Toast.LENGTH_LONG).show() }
 }
-
-@Composable private fun OnboardingWelcome() { Column(verticalArrangement = Arrangement.spacedBy(18.dp)) { Text("Make the next action obvious.", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold); Text("Auto Optimiser is a local utility for understanding app, storage, memory, and battery information Android makes available.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant); Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(22.dp)) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { Icon(Icons.Outlined.Security, null, modifier = Modifier.size(34.dp), tint = MaterialTheme.colorScheme.primary); Text("Analyse → explain → choose → verify", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("No promises that Android cannot keep. No silent deletion. No cloud account.", color = MaterialTheme.colorScheme.onSurfaceVariant) } } } }
-@Composable private fun PermissionPage(icon: ImageVector, title: String, why: String, notDo: String, button: String, onClick: () -> Unit, enabled: Boolean) { Column(verticalArrangement = Arrangement.spacedBy(18.dp)) { Icon(icon, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary); Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold); Text(why, style = MaterialTheme.typography.bodyLarge); Card(shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("What it does", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(why); Text("What it does not do", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(notDo, color = MaterialTheme.colorScheme.onSurfaceVariant) } }; Button(onClick, Modifier.fillMaxWidth()) { Text(button) } } }
-@Composable private fun ReadyPage(vm: AutoOptimiserViewModel, accessibility: Boolean, fixAccessibility: () -> Unit, fixStorage: () -> Unit, finish: () -> Unit) { Column(verticalArrangement = Arrangement.spacedBy(18.dp)) { Text("Ready when you are.", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold); Text("Optional access is never a requirement for browsing the app. Enable only what you plan to use.", color = MaterialTheme.colorScheme.onSurfaceVariant); ChecklistRow("Accessibility", if (accessibility) "Enabled" else "Disabled", accessibility, fixAccessibility); ChecklistRow("Storage access", if (vm.selectedTreeUri != null) "Folder selected" else "Not selected", vm.selectedTreeUri != null, fixStorage); ChecklistRow("Notifications", "Optional", true, {}); ChecklistRow("Automation", "Disabled", true, {}); Button(finish, Modifier.fillMaxWidth().height(52.dp)) { Text("Start using Auto Optimiser") } } }
-@Composable private fun ChecklistRow(label: String, state: String, okay: Boolean, onFix: () -> Unit) { Row(Modifier.fillMaxWidth().clickable(onClick = onFix).padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) { Icon(if (okay) Icons.Outlined.CheckCircle else Icons.Outlined.WarningAmber, null, tint = if (okay) SuccessColor else WarningColor); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(label, fontWeight = FontWeight.Medium); Text(state, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }; if (!okay) TextButton(onFix) { Text("Fix") } } }
 
 @Composable
 private fun ActiveProgressCard(progress: StopProgress) { Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) { Text("Optimising selected apps", fontWeight = FontWeight.SemiBold); Text(progress.item?.label ?: "Preparing", style = MaterialTheme.typography.titleMedium); Text("${progress.current.coerceAtMost(progress.total)} of ${progress.total}"); LinearProgressIndicator({ if (progress.total == 0) 0f else progress.current.toFloat() / progress.total }, Modifier.fillMaxWidth()); Text(progress.step.humanLabel(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant); TextButton({ StopSession.cancel() }) { Icon(Icons.Outlined.Close, null); Spacer(Modifier.width(5.dp)); Text("Cancel") } } } }

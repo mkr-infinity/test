@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="review_apps" android:enabled="true"
+        android:icon="@drawable/ic_brand" android:shortcutShortLabel="@string/shortcut_apps">
+        <intent android:action="com.mkrinfinity.autooptimiser.REVIEW_APPS"
+            android:targetPackage="com.mkrinfinity.autooptimiser"
+            android:targetClass="com.mkrinfinity.autooptimiser.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="review_files" android:enabled="true"
+        android:icon="@drawable/ic_brand" android:shortcutShortLabel="@string/shortcut_files">
+        <intent android:action="com.mkrinfinity.autooptimiser.REVIEW_FILES"
+            android:targetPackage="com.mkrinfinity.autooptimiser"
+            android:targetClass="com.mkrinfinity.autooptimiser.MainActivity" />
+    </shortcut>
+</shortcuts>

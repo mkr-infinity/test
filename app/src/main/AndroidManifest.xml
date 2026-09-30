@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.mkrinfinity.autooptimiser">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
-    <uses-permission android:name="android.permission.INTERNET" />
 
     <queries>
         <intent>
@@ -13,16 +11,18 @@
     </queries>
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
-        android:label="Auto Optimiser"
+        android:label="@string/app_name"
         android:theme="@style/Theme.AutoOptimiser.Starting"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTop"
             android:exported="true">
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
