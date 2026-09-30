@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,7 +49,6 @@ import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.BatteryStd
-import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CleaningServices
@@ -118,7 +118,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -576,7 +576,7 @@ private fun StatusMetric(label: String, value: String, icon: ImageVector, modifi
 
 @Composable
 private fun QuickAction(label: String, icon: ImageVector, modifier: Modifier, onClick: () -> Unit) {
-    OutlinedButton(onClick, modifier.height(76.dp).then(modifier), shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(8.dp)) { Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) { Icon(icon, null); Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) } }
+    OutlinedButton(onClick, modifier.height(76.dp), shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(8.dp)) { Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) { Icon(icon, null); Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) } }
 }
 
 @Composable
@@ -616,7 +616,7 @@ private fun AppsScreen(vm: AutoOptimiserViewModel, nav: NavHostController) {
 }
 
 @Composable private fun SearchField(value: String, onChange: (String) -> Unit) { androidx.compose.material3.OutlinedTextField(value, onChange, Modifier.fillMaxWidth(), placeholder = { Text("Search name or package") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, shape = RoundedCornerShape(14.dp)) }
-@Composable private fun FilterRow(selected: AppFilter, onSelect: (AppFilter) -> Unit) { Row(Modifier.fillMaxWidth().horizontalScroll(remember { androidx.compose.foundation.rememberScrollState() }), horizontalArrangement = Arrangement.spacedBy(7.dp)) { AppFilter.values().forEach { FilterChip(selected == it, { onSelect(it) }, label = { Text(it.name.lowercase().replaceFirstChar { c -> c.uppercase() }) }) } } }
+@Composable private fun FilterRow(selected: AppFilter, onSelect: (AppFilter) -> Unit) { Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) { AppFilter.values().forEach { FilterChip(selected == it, { onSelect(it) }, label = { Text(it.name.lowercase().replaceFirstChar { c -> c.uppercase() }) }) } } }
 
 @Composable
 private fun AppRow(record: AppRecord, selected: Boolean, onToggle: () -> Unit, onOpen: () -> Unit) {
@@ -631,7 +631,7 @@ private fun AppRow(record: AppRecord, selected: Boolean, onToggle: () -> Unit, o
 }
 
 @Composable private fun LabelChip(text: String) { AssistChip(onClick = {}, enabled = false, label = { Text(text, style = MaterialTheme.typography.labelSmall) }) }
-@Composable private fun AppIcon(drawable: Drawable, label: String, size: androidx.compose.ui.unit.Dp = 48.dp) { val bitmap = remember(drawable) { drawable.toBitmap(size.value.toInt().coerceAtLeast(1)) }; Image(bitmap.asImageBitmap(), contentDescription = "$label icon", Modifier.size(size).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Fit) }
+@Composable private fun AppIcon(drawable: Drawable, label: String, size: androidx.compose.ui.unit.Dp = 48.dp) { val bitmap = remember(drawable) { drawable.toBitmap(size.value.toInt().coerceAtLeast(1)) }; Image(bitmap.asImageBitmap(), contentDescription = "$label icon", modifier = Modifier.size(size).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Fit) }
 private fun Drawable.toBitmap(size: Int): Bitmap { val bitmap = Bitmap.createBitmap(size * 2, size * 2, Bitmap.Config.ARGB_8888); val canvas = Canvas(bitmap); setBounds(0, 0, canvas.width, canvas.height); draw(canvas); return bitmap }
 
 @Composable
@@ -773,7 +773,7 @@ private fun OnboardingFlow(vm: AutoOptimiserViewModel) {
     }
 }
 
-@Composable private fun OnboardingWelcome() { Column(verticalArrangement = Arrangement.spacedBy(18.dp)) { Text("Make the next action obvious.", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold); Text("Auto Optimiser is a local utility for understanding app, storage, memory, and battery information Android makes available.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant); Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(22.dp)) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { Icon(Icons.Outlined.Security, null, tint = MaterialTheme.colorScheme.primary, Modifier.size(34.dp)); Text("Analyse → explain → choose → verify", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("No promises that Android cannot keep. No silent deletion. No cloud account.", color = MaterialTheme.colorScheme.onSurfaceVariant) } } } }
+@Composable private fun OnboardingWelcome() { Column(verticalArrangement = Arrangement.spacedBy(18.dp)) { Text("Make the next action obvious.", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold); Text("Auto Optimiser is a local utility for understanding app, storage, memory, and battery information Android makes available.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant); Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(22.dp)) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { Icon(Icons.Outlined.Security, null, modifier = Modifier.size(34.dp), tint = MaterialTheme.colorScheme.primary); Text("Analyse → explain → choose → verify", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("No promises that Android cannot keep. No silent deletion. No cloud account.", color = MaterialTheme.colorScheme.onSurfaceVariant) } } } }
 @Composable private fun PermissionPage(icon: ImageVector, title: String, why: String, notDo: String, button: String, onClick: () -> Unit, enabled: Boolean) { Column(verticalArrangement = Arrangement.spacedBy(18.dp)) { Icon(icon, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary); Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold); Text(why, style = MaterialTheme.typography.bodyLarge); Card(shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("What it does", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(why); Text("What it does not do", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); Text(notDo, color = MaterialTheme.colorScheme.onSurfaceVariant) } }; Button(onClick, Modifier.fillMaxWidth()) { Text(button) } } }
 @Composable private fun ReadyPage(vm: AutoOptimiserViewModel, accessibility: Boolean, fixAccessibility: () -> Unit, fixStorage: () -> Unit, finish: () -> Unit) { Column(verticalArrangement = Arrangement.spacedBy(18.dp)) { Text("Ready when you are.", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold); Text("Optional access is never a requirement for browsing the app. Enable only what you plan to use.", color = MaterialTheme.colorScheme.onSurfaceVariant); ChecklistRow("Accessibility", if (accessibility) "Enabled" else "Disabled", accessibility, fixAccessibility); ChecklistRow("Storage access", if (vm.selectedTreeUri != null) "Folder selected" else "Not selected", vm.selectedTreeUri != null, fixStorage); ChecklistRow("Notifications", "Optional", true, {}); ChecklistRow("Automation", "Disabled", true, {}); Button(finish, Modifier.fillMaxWidth().height(52.dp)) { Text("Start using Auto Optimiser") } } }
 @Composable private fun ChecklistRow(label: String, state: String, okay: Boolean, onFix: () -> Unit) { Row(Modifier.fillMaxWidth().clickable(onClick = onFix).padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) { Icon(if (okay) Icons.Outlined.CheckCircle else Icons.Outlined.WarningAmber, null, tint = if (okay) SuccessColor else WarningColor); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(label, fontWeight = FontWeight.Medium); Text(state, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }; if (!okay) TextButton(onFix) { Text("Fix") } } }

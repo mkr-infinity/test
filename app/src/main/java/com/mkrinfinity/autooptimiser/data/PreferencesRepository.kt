@@ -18,7 +18,7 @@ data class LastOptimisation(
 
 class PreferencesRepository(context: Context) {
     private val prefs = context.getSharedPreferences("auto_optimiser_preferences", Context.MODE_PRIVATE)
-    private val mutableTheme = MutableStateFlow(theme)
+    private val mutableTheme = MutableStateFlow(readTheme())
     val theme: StateFlow<ThemeMode> = mutableTheme
 
     val onboardingComplete: Boolean get() = prefs.getBoolean(KEY_ONBOARDING, false)
@@ -66,8 +66,9 @@ class PreferencesRepository(context: Context) {
         return LastOptimisation(at, prefs.getInt(KEY_LAST_ATTEMPTED, 0), prefs.getInt(KEY_LAST_SUCCESSFUL, 0), prefs.getInt(KEY_LAST_SKIPPED, 0), prefs.getInt(KEY_LAST_FAILED, 0))
     }
 
-    private val theme: ThemeMode
-        get() = runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.SYSTEM.name)!!) }.getOrDefault(ThemeMode.SYSTEM)
+    private fun readTheme(): ThemeMode = runCatching {
+        ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name)
+    }.getOrDefault(ThemeMode.SYSTEM)
 
     private companion object {
         const val KEY_ONBOARDING = "onboarding_complete"
