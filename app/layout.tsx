@@ -9,11 +9,11 @@ import '@fontsource/jetbrains-mono/400.css';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Lohitha Damisetti · Unmasked · Full Stack Developer',
-  description: "Everyone wanted to know what's under the mask. Scroll to play the episode.",
+  title: 'MKR Infinity · Self-Taught System Builder',
+  description: 'Mohammad Kaif Raja builds practical Android tools, web products, automation workflows, and AI-powered solutions.',
   openGraph: {
-    title: 'Kakashi: Unmasked',
-    description: "What's under the mask? Scroll to play.",
+    title: 'MKR Infinity · System Builder',
+    description: 'Practical tools, systems, and experiments by Mohammad Kaif Raja.',
     images: ['/stills/face.jpg'],
   },
 };

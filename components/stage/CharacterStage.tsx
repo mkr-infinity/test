@@ -18,7 +18,7 @@ function aboutPlace(vw: number, vh: number, mobile: boolean): Place {
 }
 
 /**
- * One fixed full-screen canvas that "plays" Kakashi:
+ * One fixed full-screen canvas that plays the builder's field-note sequence:
  * hero.mp4 frames are scrubbed by scroll, the last pose flies down the page,
  * then about.mp4 frames continue from that exact pose.
  */

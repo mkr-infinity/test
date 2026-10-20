@@ -72,12 +72,13 @@ export default function Missions() {
                     <li key={t}>{t}</li>
                   ))}
                 </ul>
-                <a className="ms-link" href={e.url} target="_blank" rel="noreferrer">
-                  <span>Open the source</span>
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M7 17L17 7M9 7h8v8" />
-                  </svg>
-                </a>
+                <div className="ms-links">
+                  <a className="ms-link" href={e.url} target="_blank" rel="noreferrer">
+                    <span>Source</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M9 7h8v8" /></svg>
+                  </a>
+                  {e.liveUrl && <a className="ms-link" href={e.liveUrl} target="_blank" rel="noreferrer"><span>Live / info</span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M9 7h8v8" /></svg></a>}
+                </div>
               </div>
             </div>
           </article>

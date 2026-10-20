@@ -42,7 +42,7 @@ function useLive() {
 const step = (p: number, a: number) => ({ opacity: seg(p, a, a + 0.08), transform: `translateY(${(1 - seg(p, a, a + 0.08)) * 30}px)` });
 
 const STORY =
-  'I copy a stack once and master it forever. I build scalable full-stack products with React, Node.js and modern backends — clean APIs, sharp system design, and code that ships. Department topper in Data Science, top 100 at Myntra HackerRamp, and 1,250+ problems solved across platforms.';
+  'I am a self-taught system builder from India. Since 2016, I have learned by breaking things, understanding how they work, and rebuilding practical tools with Android, web, automation, AI, and no-code workflows.';
 
 /** Ring dial for a stat — fills as you scroll. */
 function Dial({ value, suffix, label, k }: { value: number; suffix: string; label: string; k: number }) {
@@ -106,7 +106,7 @@ export default function About() {
             ))}
           </div>
           <a className="ab-resume" href={PROFILE.resume} target="_blank" rel="noreferrer" style={step(p, 0.78)}>
-            Read the full script (résumé) <span>↗</span>
+            Visit the full build log <span>↗</span>
           </a>
         </div>
         <div className="ab-progress">

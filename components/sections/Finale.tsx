@@ -27,12 +27,12 @@ function Magnetic({ href, children, primary }: { href: string; children: React.R
 const ROLL = [
   ['Written & Directed by', PROFILE.realName],
   ['Lead Role', PROFILE.role],
-  ['Frontend', 'React.js · React Native · Tailwind CSS'],
-  ['Backend', 'Node.js · Express.js · Spring Boot · Go'],
-  ['Data', 'MongoDB · PostgreSQL · Redis'],
+  ['Focus', 'Android · Web · Automation · AI'],
+  ['Tools', 'TypeScript · Kotlin · Python · React'],
   ['Featuring', EPISODES.map((e) => e.name).join(' · ')],
-  ['Training Arc', 'Technical Hub Pvt Ltd'],
-  ['Filmed at', 'Aditya College of Engineering and Technology'],
+  ['Origin', 'India · Self-taught since 2016'],
+  ['Home base', 'iamakif.me'],
+  ['Source', 'github.com/mkr-infinity'], 
 ];
 
 export default function Finale() {
@@ -51,12 +51,12 @@ export default function Finale() {
       </motion.h2>
       <p className="fin-sub">Open to full-stack roles, internships and hackathon squads. The next mission starts with one message.</p>
       <div className="fin-links">
-        <Magnetic href={`mailto:${PROFILE.email}`} primary>
-          {PROFILE.email}
+        <Magnetic href={PROFILE.website} primary>
+          Visit my website ↗
         </Magnetic>
         <Magnetic href={PROFILE.github}>GitHub ↗</Magnetic>
-        <Magnetic href={PROFILE.linkedin}>LinkedIn ↗</Magnetic>
-        <Magnetic href={PROFILE.resume}>Résumé ↗</Magnetic>
+        <Magnetic href={PROFILE.instagram}>Instagram ↗</Magnetic>
+        <Magnetic href={PROFILE.telegram}>Telegram ↗</Magnetic>
       </div>
 
       <div className="roll" aria-label="Credits">

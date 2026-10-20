@@ -40,7 +40,7 @@ export default function TopNav({ show }: { show: boolean }) {
     <motion.header className="nav" initial={{ y: -40, opacity: 0 }} animate={{ y: show ? 0 : -40, opacity: show ? 1 : 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
       <div className="nav-progress" ref={bar} />
       <button className="nav-mark" onClick={() => scrollToId('billboard')} aria-label="Back to top">
-        <span className="nm-sq">LD</span>
+        <span className="nm-sq">MKR</span>
         <span className="nm-txt">
           {PROFILE.realName}
           <small>{PROFILE.role}</small>
@@ -54,8 +54,8 @@ export default function TopNav({ show }: { show: boolean }) {
           </button>
         ))}
       </nav>
-      <a className="nav-cta" href={`mailto:${PROFILE.email}`}>
-        <span>Hire me</span>
+      <a className="nav-cta" href={PROFILE.website} target="_blank" rel="noreferrer">
+        <span>Visit site</span>
       </a>
     </motion.header>
   );

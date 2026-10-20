@@ -62,7 +62,7 @@ export default function Billboard({ ready }: { ready: boolean }) {
                 <Words text={PROFILE.subtitle} delay={0.65} className="t2" />
               </h1>
               <motion.p className="hi-role" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1, duration: 0.9, ease: EASE }}>
-                {PROFILE.role} <span>·</span> React <span>·</span> Node <span>·</span> System Design
+                {PROFILE.role} <span>·</span> Android <span>·</span> Web <span>·</span> AI
               </motion.p>
               <motion.p className="hi-log" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.25, duration: 0.9, ease: EASE }}>
                 Everyone wanted to know what was under the mask. Scroll, and the scene plays frame by frame. Stop, and time stops with you.

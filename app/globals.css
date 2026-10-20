@@ -1,17 +1,17 @@
 /* ============================================================
-   UNMASKED — anime-film portfolio.  Palette: Netflix reds only.
-   ============================================================ */
+   MKR INFINITY — technical field notes for a self-taught builder.
+   ============================================================
 @font-face { font-family: 'Bangers'; src: url('/fonts/bangers.woff2') format('woff2'); font-display: swap; }
 :root {
-  --bg: #000;
-  --ink: #141414;
-  --red: #e50914;
-  --red-d: #b20710;
-  --red-dd: #831010;
-  --text: #fff;
-  --muted: #b3b3b3;
-  --dim: #6d6d6d;
-  --line: rgba(255, 255, 255, 0.1);
+  --bg: #0c0d0f;
+  --ink: #17191d;
+  --red: #d5b15a;
+  --red-d: #9e7d35;
+  --red-dd: #6f5625;
+  --text: #f4f1e8;
+  --muted: #aaa79c;
+  --dim: #6e6c64;
+  --line: rgba(244, 241, 232, 0.12);
   --display: 'Bebas Neue', Impact, sans-serif;
   --body: 'Inter', system-ui, sans-serif;
   --manga: 'Bangers', 'Bebas Neue', Impact, sans-serif;
@@ -20,11 +20,11 @@
   --gx: clamp(16px, 4vw, 64px);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { background: #000; }
+html { background: var(--bg); }
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 .lenis.lenis-stopped { overflow: hidden; }
-body { background: #000; color: var(--text); font-family: var(--body); overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 img { display: block; max-width: 100%; }
@@ -306,8 +306,17 @@ html:not(.has-cursor) .cur-dot, html:not(.has-cursor) .cur-ring { display: none;
 
 /* ===== mobile ===== */
 @media (max-width: 820px) {
-  .hero-shade { background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.5) 45%, transparent 70%); }
-  .hero-intro { top: auto; bottom: 7vh; transform: none; width: auto; right: var(--gx); }
+  .hero-shade { background: linear-gradient(to top, rgba(6, 8, 12, 0.98) 0%, rgba(6, 8, 12, 0.9) 48%, rgba(6, 8, 12, 0.5) 78%, rgba(6, 8, 12, 0.28) 100%); }
+  .hero-intro { top: auto; bottom: 7vh; left: 16px; transform: none; width: calc(100% - 32px); right: auto; }
+  .hi-credit { color: var(--accent); font-size: 9px; }
+  .hi-title { color: #f3f6f8; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85); }
+  .hi-title .t1 { font-size: 22vw; line-height: 0.84; }
+  .hi-title .t2 { font-size: 10vw; letter-spacing: 0.15em; }
+  .hi-role { color: #d8e2e8; font-size: 10px; }
+  .hi-actions { gap: 8px; flex-wrap: wrap; }
+  .hi-actions .btn-red { background: var(--red); color: #fff; border: 0; }
+  .hi-actions .btn-line { border-color: rgba(255, 255, 255, 0.7); color: #fff; background: rgba(6, 8, 12, 0.72); }
+  .hi-cue { display: none; }
   .hi-title .t1 { font-size: 26vw; }
   .hi-title .t2 { font-size: 11vw; letter-spacing: 0.24em; }
   .hi-log { display: none; }
