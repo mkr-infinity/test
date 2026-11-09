@@ -13,6 +13,7 @@ A cinematic, scroll-driven portfolio that plays like an anime film. Scroll to pl
 - 🎬 **Cinematic scroll** — pinned hero, scroll-scrubbed scenes, letterbox bars, film grain, credits roll
 - 🥷 **3D WebGL stage** — React Three Fiber character backdrop with postprocessing
 - 🎨 **4 accent themes** — Crimson / Azure / Lime / Amber, switchable from the nav, persisted in `localStorage`
+- ⌨️ **Keyboard shortcuts** — `←`/`→` jump between chapters, `T` cycles the accent theme
 - 📱 **Fully responsive** — tuned for desktop, tablet and small phones (down to 320px)
 - ♿ **Accessible** — keyboard focus styles, `aria-current`, `prefers-reduced-motion` support, touch-safe cursor
 - 🔍 **SEO-ready** — metadata, OpenGraph/Twitter cards, robots.txt + sitemap, themed 404
