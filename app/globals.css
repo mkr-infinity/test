@@ -457,3 +457,8 @@ html[data-accent='amber'] {
   .gd-grid { grid-template-columns: 1fr; }
   .gd-card h3 { font-size: 22px; }
 }
+
+/* ===== back to top ===== */
+.btt { position: fixed; right: calc(var(--gx) * 0.6); bottom: calc(var(--gx) * 0.6); z-index: 90; width: 44px; height: 44px; display: grid; place-items: center; background: var(--red); color: #fff; font-size: 18px; line-height: 1; border-radius: 50%; box-shadow: 0 4px 24px rgba(229, 9, 20, 0.45); opacity: 0; pointer-events: none; transform: translateY(12px); transition: opacity 0.3s, transform 0.3s var(--ease), background 0.3s; }
+.btt.on { opacity: 1; pointer-events: auto; transform: none; }
+.btt:hover { background: var(--red-d); }

@@ -13,6 +13,7 @@ import Journey from '@/components/sections/Journey';
 import Finale from '@/components/sections/Finale';
 import Intro from '@/components/ui/Intro';
 import TopNav from '@/components/ui/TopNav';
+import BackToTop from '@/components/ui/BackToTop';
 import Cursor from '@/components/ui/Cursor';
 import SmoothScroll, { setScrollLocked } from '@/components/ui/SmoothScroll';
 import { loadFrames } from '@/lib/frames';
@@ -46,6 +47,7 @@ export default function Home() {
       <CharacterStage />
       <Cursor />
       <TopNav show={ready} />
+      <BackToTop />
       <main className="content" id="top">
         <Billboard ready={ready} />
         <Flight />
