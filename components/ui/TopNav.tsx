@@ -15,9 +15,28 @@ export const CHAPTERS = [
   { id: 'contact', label: 'Finale' },
 ];
 
+const ACCENTS = ['crimson', 'azure', 'lime', 'amber'] as const;
+type Accent = (typeof ACCENTS)[number];
+const ACCENT_LABEL: Record<Accent, string> = { crimson: 'Crimson', azure: 'Azure', lime: 'Lime', amber: 'Amber' };
+
 export default function TopNav({ show }: { show: boolean }) {
   const [active, setActive] = useState(0);
+  const [accent, setAccent] = useState<Accent>('crimson');
   const bar = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const saved = window.localStorage.getItem('accent') as Accent | null;
+    if (saved && ACCENTS.includes(saved)) {
+      setAccent(saved);
+      if (saved !== 'crimson') document.documentElement.dataset.accent = saved;
+    }
+  }, []);
+  const cycleAccent = () => {
+    const next = ACCENTS[(ACCENTS.indexOf(accent) + 1) % ACCENTS.length];
+    setAccent(next);
+    if (next === 'crimson') delete document.documentElement.dataset.accent;
+    else document.documentElement.dataset.accent = next;
+    window.localStorage.setItem('accent', next);
+  };
   useEffect(() => {
     let raf = 0;
     const t = () => {
@@ -54,6 +73,10 @@ export default function TopNav({ show }: { show: boolean }) {
           </button>
         ))}
       </nav>
+      <button className="nav-theme" onClick={cycleAccent} aria-label={`Accent theme: ${ACCENT_LABEL[accent]}. Switch theme`}>
+        <i data-accent-dot={accent} />
+        <span>{ACCENT_LABEL[accent]}</span>
+      </button>
       <a className="nav-cta" href={`mailto:${PROFILE.email}`}>
         <span>Hire me</span>
       </a>
