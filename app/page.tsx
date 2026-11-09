@@ -17,6 +17,7 @@ import BackToTop from '@/components/ui/BackToTop';
 import ResumeEpisode from '@/components/ui/ResumeEpisode';
 import ConsoleEgg from '@/components/ui/ConsoleEgg';
 import TitlePause from '@/components/ui/TitlePause';
+import ViewerPicker from '@/components/ui/ViewerPicker';
 import Cursor from '@/components/ui/Cursor';
 import SmoothScroll, { setScrollLocked } from '@/components/ui/SmoothScroll';
 import { loadFrames } from '@/lib/frames';
@@ -51,6 +52,7 @@ export default function Home() {
       <Cursor />
       <ConsoleEgg />
       <TitlePause />
+      <ViewerPicker />
       <TopNav show={ready} />
       <BackToTop />
       <main className="content" id="top">
