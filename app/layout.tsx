@@ -30,6 +30,7 @@ export const metadata: Metadata = {
     images: ['/stills/face.jpg'],
   },
   icons: { icon: '/stills/masked.jpg' },
+  colorScheme: 'dark',
 };
 
 export const viewport: Viewport = { themeColor: '#000000', width: 'device-width', initialScale: 1 };

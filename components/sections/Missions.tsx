@@ -55,7 +55,7 @@ export default function Missions() {
             <div className="ms-inner" onPointerMove={spot} data-hot>
               <div className="ms-spot" />
               <div className="ms-media">
-                <img src={e.still} alt="" loading="lazy" />
+                <img src={e.still} alt="" loading="lazy" decoding="async" />
                 <div className="ms-duo" />
                 <span className="ms-big">{pad2(i + 1)}</span>
                 <span className="ms-stamp">{e.rank}</span>
