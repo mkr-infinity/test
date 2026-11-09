@@ -14,6 +14,7 @@ import Finale from '@/components/sections/Finale';
 import Intro from '@/components/ui/Intro';
 import TopNav from '@/components/ui/TopNav';
 import BackToTop from '@/components/ui/BackToTop';
+import ResumeEpisode from '@/components/ui/ResumeEpisode';
 import Cursor from '@/components/ui/Cursor';
 import SmoothScroll, { setScrollLocked } from '@/components/ui/SmoothScroll';
 import { loadFrames } from '@/lib/frames';
@@ -62,6 +63,7 @@ export default function Home() {
         </div>
       </main>
       {!ready && <Intro onDone={done} />}
+      {ready && <ResumeEpisode />}
     </>
   );
 }
