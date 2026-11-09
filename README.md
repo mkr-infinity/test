@@ -12,7 +12,7 @@ A cinematic, scroll-driven portfolio that plays like an anime film. Scroll to pl
 
 - 🎬 **Cinematic scroll** — pinned hero, scroll-scrubbed scenes, letterbox bars, film grain, credits roll
 - 🥷 **3D WebGL stage** — React Three Fiber character backdrop with postprocessing
-- 🎨 **4 accent themes** — Crimson / Azure / Lime / Amber, switchable from the nav, persisted in `localStorage`
+- 🎭 **5 full website skins** — Cinema / Arcade / Manga / Noir / Terminal: each swaps palette, font system, background world and structural treatment (two are complete light modes), not just colors; switchable from the nav, persisted in `localStorage`
 - ⌨️ **Keyboard shortcuts** — `←`/`→` jump between chapters, `T` cycles the accent theme
 - 🛰 **Field Guides chapter** — the real guide repos as first-class content
 - ▶️ **Continue watching** — scroll progress persists per visitor; they can resume like a streaming app
