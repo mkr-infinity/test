@@ -409,3 +409,13 @@ html[data-accent='amber'] {
   --red-d: #c78e00;
   --red-dd: #8a6200;
 }
+
+/* ===== accent switcher ===== */
+.nav-theme { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); transition: color 0.3s, border-color 0.3s; }
+.nav-theme:hover { color: #fff; border-color: var(--red); }
+.nav-theme i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.nav-theme i[data-accent-dot='crimson'] { background: #e50914; }
+.nav-theme i[data-accent-dot='azure'] { background: #2f6fed; }
+.nav-theme i[data-accent-dot='lime'] { background: #1db954; }
+.nav-theme i[data-accent-dot='amber'] { background: #f5b301; }
+@media (max-width: 820px) { .nav-theme span { display: none; } .nav-theme { padding: 10px; } }
