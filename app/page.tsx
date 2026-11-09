@@ -8,6 +8,7 @@ import About, { Flight } from '@/components/sections/About';
 import Arsenal from '@/components/sections/Arsenal';
 import Missions from '@/components/sections/Missions';
 import Honors from '@/components/sections/Honors';
+import Guides from '@/components/sections/Guides';
 import Journey from '@/components/sections/Journey';
 import Finale from '@/components/sections/Finale';
 import Intro from '@/components/ui/Intro';
@@ -53,6 +54,7 @@ export default function Home() {
           <Arsenal />
           <Missions />
           <Honors />
+          <Guides />
           <Journey />
           <Finale />
         </div>
