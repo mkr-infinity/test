@@ -144,3 +144,41 @@ export const SEASONS = [
     ],
   },
 ];
+
+export const GUIDES = [
+  {
+    id: 'gsi',
+    name: 'GSI Flashing Guide',
+    stars: 68,
+    tagline: 'The fully explained guide to flashing a compatible Generic System Image to any device.',
+    url: 'https://github.com/mkr-infinity/Guide-for-flashing-GSI-to-any-device',
+  },
+  {
+    id: 'bootloader',
+    name: 'Bootloader Unlock Guide',
+    stars: 27,
+    tagline: 'Beginner-friendly walkthrough for unlocking the bootloader on any Android device.',
+    url: 'https://github.com/mkr-infinity/Guide-to-unlock-Bootloader',
+  },
+  {
+    id: 'drivers',
+    name: 'ADB & Fastboot Drivers',
+    stars: 13,
+    tagline: 'Official Google drivers — always installed and updated, no more searching.',
+    url: 'https://github.com/mkr-infinity/ADB-Fastboot_Drivers',
+  },
+  {
+    id: 'cheatsheet',
+    name: 'Android Command CheatSheet',
+    stars: 8,
+    tagline: 'A beautiful, searchable reference for ADB & Fastboot commands — live tool included.',
+    url: 'https://github.com/mkr-infinity/android-command-cheatsheet',
+  },
+  {
+    id: 'phonepe',
+    name: 'PhonePe on Rooted Devices',
+    stars: 12,
+    tagline: 'A tested method to run PhonePe on rooted devices without breaking the bank app.',
+    url: 'https://github.com/mkr-infinity/PhonePe-in-rooted-device',
+  },
+];
