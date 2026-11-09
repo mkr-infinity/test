@@ -49,14 +49,14 @@ export default function Finale() {
           </span>
         ))}
       </motion.h2>
-      <p className="fin-sub">Open to full-stack roles, internships and hackathon squads. The next mission starts with one message.</p>
+      <p className="fin-sub">Open to collaborations, freelance builds and open-source work. The next mission starts with one message.</p>
       <div className="fin-links">
         <Magnetic href={`mailto:${PROFILE.email}`} primary>
           {PROFILE.email}
         </Magnetic>
         <Magnetic href={PROFILE.github}>GitHub ↗</Magnetic>
-        <Magnetic href={PROFILE.linkedin}>LinkedIn ↗</Magnetic>
-        <Magnetic href={PROFILE.resume}>Résumé ↗</Magnetic>
+        <Magnetic href={PROFILE.linkedin}>Telegram ↗</Magnetic>
+        <Magnetic href={PROFILE.resume}>All Repos ↗</Magnetic>
       </div>
 
       <div className="roll" aria-label="Credits">
