@@ -56,6 +56,7 @@ export default function Finale() {
         </Magnetic>
         <Magnetic href={PROFILE.github}>GitHub ↗</Magnetic>
         <Magnetic href={PROFILE.linkedin}>Telegram ↗</Magnetic>
+        <Magnetic href={PROFILE.instagram}>Instagram ↗</Magnetic>
         <Magnetic href={PROFILE.resume}>All Repos ↗</Magnetic>
       </div>
 
