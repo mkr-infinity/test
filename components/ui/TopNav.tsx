@@ -40,15 +40,15 @@ export default function TopNav({ show }: { show: boolean }) {
     <motion.header className="nav" initial={{ y: -40, opacity: 0 }} animate={{ y: show ? 0 : -40, opacity: show ? 1 : 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
       <div className="nav-progress" ref={bar} />
       <button className="nav-mark" onClick={() => scrollToId('billboard')} aria-label="Back to top">
-        <span className="nm-sq">LD</span>
+        <span className="nm-sq">KR</span>
         <span className="nm-txt">
           {PROFILE.realName}
           <small>{PROFILE.role}</small>
         </span>
       </button>
-      <nav className="nav-chapters">
+      <nav className="nav-chapters" aria-label="Chapters">
         {CHAPTERS.map((c, i) => (
-          <button key={c.id} className={i === active ? 'on' : ''} onClick={() => scrollToId(c.id)}>
+          <button key={c.id} className={i === active ? 'on' : ''} aria-current={i === active ? 'true' : undefined} onClick={() => scrollToId(c.id)}>
             <i>{String(i).padStart(2, '0')}</i>
             <span>{c.label}</span>
           </button>
