@@ -47,6 +47,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         {children}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Person',
+              name: 'Mohammad Kaif Raja',
+              alternateName: ['mkr-infinity', 'Kaif Raja'],
+              url: 'https://github.com/mkr-infinity',
+              sameAs: ['https://github.com/mkr-infinity', 'https://mkr-infinity.github.io', 'https://t.me/mkr_infinity'],
+              jobTitle: 'System Optimizer & Open-Source Builder',
+              description: 'Android modder, Linux tinkerer and open-source builder — from flashing OSes to customizing Linux.',
+              knowsAbout: ['Linux', 'Arch Linux', 'Android Modding', 'GSI Flashing', 'Python', 'TypeScript', 'Kotlin', 'Open Source'],
+            }),
+          }}
+        />
       </body>
     </html>
   );
