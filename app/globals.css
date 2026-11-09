@@ -498,3 +498,52 @@ html[data-accent='amber'] {
   .vp-card { width: min(46vw, 220px); padding: 18px 10px; }
   .vp-card span { font-size: 11px; }
 }
+
+/* ============================================================
+   THEME SYSTEM — data-theme layers (activated by the nav switcher)
+   cinema (default) · arcade · manga · noir · terminal
+   ============================================================ */
+
+/* ----- ARCADE: neon cyan on synth black, mono type everywhere ----- */
+html[data-theme='arcade'] {
+  --red: #00f0ff;
+  --red-d: #00b8cc;
+  --red-dd: #005a66;
+  --line: rgba(0, 240, 255, 0.22);
+  --muted: #8fd4e8;
+  --dim: #3f7f96;
+  --display: 'JetBrains Mono', monospace;
+  --manga: 'JetBrains Mono', monospace;
+  --body: 'JetBrains Mono', system-ui, monospace;
+}
+html[data-theme='arcade'] .bd-vignette { background: radial-gradient(38% 55% at 61% 52%, rgba(0, 240, 255, 0.16), rgba(0, 90, 102, 0.1) 55%, transparent 75%), radial-gradient(120% 90% at 50% 45%, transparent 45%, rgba(2, 0, 18, 0.9) 100%); }
+html[data-theme='arcade'] h2, html[data-theme='arcade'] .hi-title .t1, html[data-theme='arcade'] .ms-body h3 { letter-spacing: 0.05em; }
+html[data-theme='arcade'] .btn-red, html[data-theme='arcade'] .ms-link, html[data-theme='arcade'] .rt-resume, html[data-theme='arcade'] .btt, html[data-theme='arcade'] .nav-chapters button.on { box-shadow: 0 0 18px rgba(0, 240, 255, 0.4), 0 0 46px rgba(0, 240, 255, 0.16); }
+html[data-theme='arcade'] .ms-stamp { background: rgba(0, 240, 255, 0.16); }
+html[data-theme='arcade'] .story-text { text-shadow: 4px 4px 0 #003a44, 0 0 30px rgba(0, 240, 255, 0.3); }
+html[data-theme='arcade'] .ms-tag { color: #9fe8f5; }
+html[data-theme='arcade'] .gd-card:hover { box-shadow: 0 0 22px rgba(0, 240, 255, 0.22); }
+
+/* ----- TERMINAL: phosphor green CRT, mono type, scanlines ----- */
+html[data-theme='terminal'] {
+  --red: #3dff6e;
+  --red-d: #27cc52;
+  --red-dd: #0f7a31;
+  --line: rgba(61, 255, 110, 0.25);
+  --muted: #93d8a8;
+  --dim: #4e8a63;
+  --display: 'JetBrains Mono', monospace;
+  --manga: 'JetBrains Mono', monospace;
+  --body: 'JetBrains Mono', monospace;
+}
+html[data-theme='terminal'] body::before { content: ''; position: fixed; inset: 0; z-index: 301; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(61, 255, 110, 0.05) 0 1px, transparent 1px 4px); }
+html[data-theme='terminal'] body::after { opacity: 0.03; }
+html[data-theme='terminal'] h2, html[data-theme='terminal'] .hi-title .t1, html[data-theme='terminal'] .he-name, html[data-theme='terminal'] .flight-card b { letter-spacing: 0.08em; text-shadow: 0 0 12px rgba(61, 255, 110, 0.4); }
+html[data-theme='terminal'] .subs p { text-shadow: 0 0 10px rgba(61, 255, 110, 0.35); }
+html[data-theme='terminal'] .btn-red { clip-path: none; border: 1px solid var(--red); background: transparent; color: var(--red); }
+html[data-theme='terminal'] .btn-red::after { display: none; }
+html[data-theme='terminal'] .btn-red:hover { background: rgba(61, 255, 110, 0.12); color: var(--red); }
+html[data-theme='terminal'] .ms-inner, html[data-theme='terminal'] .gd-card, html[data-theme='terminal'] .ab-tags span { border: 1px solid rgba(61, 255, 110, 0.3); }
+html[data-theme='terminal'] .story-text { transform: none; text-shadow: 0 0 14px rgba(61, 255, 110, 0.45); }
+html[data-theme='terminal'] .ms-tag { color: #a4ffc0; }
+html[data-theme='terminal'] .vp-title span { text-shadow: 0 0 14px rgba(61, 255, 110, 0.45); }
