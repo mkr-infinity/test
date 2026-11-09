@@ -8,6 +8,8 @@ A cinematic, scroll-driven portfolio that plays like an anime film. Scroll to pl
 
 **More projects & guides:** [github.com/mkr-infinity](https://github.com/mkr-infinity) · [mkr-infinity.github.io](https://mkr-infinity.github.io/)
 
+**🎬 Live on GitHub Pages: [mkr-infinity.github.io/test](https://mkr-infinity.github.io/test/)** — deploys automatically on every push to `main` via [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml) (static export, `NEXT_PUBLIC_BASE_PATH=/test`).
+
 ## Features
 
 - 🎬 **Cinematic scroll** — pinned hero, scroll-scrubbed scenes, letterbox bars, film grain, credits roll
