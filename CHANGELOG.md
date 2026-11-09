@@ -28,6 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accent color cycle replaced by the skin system; the `T` shortcut and nav button now cycle skins ([#54](https://github.com/mkr-infinity/test/pull/54))
 - README features/structure docs refreshed ([#46](https://github.com/mkr-infinity/test/pull/46), [#55](https://github.com/mkr-infinity/test/pull/55))
 
+## [2.0.0] — 2026-11-09
+
+### The rewrite
+
+- **Portfolio rebuilt from scratch as a framework-free static site** — plain HTML + one CSS file + ~40 lines of JS. No Next.js, no React, no three.js, no framer-motion, no build step, no dependencies. Total payload is a few tens of KB and loads instantly on any device ([#62](https://github.com/mkr-infinity/test/pull/62))
+- **Dark & light themes** — system-preference aware, header toggle, persisted, set before first paint (no theme flash)
+- All real content retained: 6 missions, 5 field guides with live links, the 3-arc journey, stats (30+ repos / 428+ stars / 68⭐ top repo) and every contact channel
+- Deploy workflow rewritten for the no-build flow; GitHub Pages publishing unchanged
+- The v1 anime-movie experience remains available in git history and the `v1.1.0` tag
+
 ## [1.1.0] — 2026-11-09
 
 ### Added

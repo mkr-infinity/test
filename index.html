@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mohammad Kaif Raja — System Optimizer &amp; Open-Source Builder</title>
+  <meta name="description" content="Portfolio of Mohammad Kaif Raja (mkr-infinity) — Android modder, Linux tinkerer and open-source builder. From flashing OSes to customizing Linux: tools, apps and guides, crafted by curiosity." />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)" />
+  <link rel="canonical" href="https://mkr-infinity.github.io/test/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Mohammad Kaif Raja" />
+  <meta property="og:title" content="Mohammad Kaif Raja — System Optimizer &amp; Open-Source Builder" />
+  <meta property="og:description" content="Android modder, Linux tinkerer and open-source builder. Tools, apps and guides — crafted by curiosity, perfected by persistence." />
+  <meta property="og:url" content="https://mkr-infinity.github.io/test/" />
+  <meta property="og:image" content="https://mkr-infinity.github.io/test/assets/og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Mohammad Kaif Raja — Open-Source Builder" />
+  <meta name="twitter:description" content="Tools, apps and guides — crafted by curiosity, perfected by persistence." />
+  <meta name="twitter:image" content="https://mkr-infinity.github.io/test/assets/og.jpg" />
+
+  <link rel="icon" href="assets/favicon.ico" sizes="48x48" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+
+  <!-- Set the theme before first paint — no flash of wrong theme -->
+  <script>
+    (function () {
+      var t = localStorage.getItem('theme');
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-head">
+    <div class="wrap bar">
+      <a class="mark" href="#top" aria-label="Back to top">
+        <span class="mark-sq">KR</span>
+        <span class="mark-name">Mohammad Kaif Raja<small>System Optimizer &amp; Open-Source Builder</small></span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#projects">Projects</a>
+        <a href="#guides">Guides</a>
+        <a href="#journey">Journey</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch color theme">
+        <svg class="ico-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3L19 19M19 5l-1.7 1.7M6.7 17.3L5 19"/></g></svg>
+        <svg class="ico-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.2 14.5A8.5 8.5 0 0 1 9.5 3.8a8.5 8.5 0 1 0 10.7 10.7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ===== hero ===== -->
+    <section class="hero wrap" id="top">
+      <p class="kicker reveal">MKR_INFINITY · EST. ON GITHUB</p>
+      <h1 class="reveal">
+        Mohammad<br /><em>Kaif Raja</em>
+      </h1>
+      <p class="role reveal">System Optimizer <span>&amp;</span> Open-Source Builder</p>
+      <p class="lede reveal">
+        Passionate about systems, not just code. From flashing operating systems to
+        customizing Linux, I’ve tested countless distros. Android modder, Linux tinkerer,
+        builder of free tools — tech is my playground, curiosity my guide.
+      </p>
+      <div class="cta reveal">
+        <a class="btn primary" href="https://github.com/mkr-infinity" target="_blank" rel="noreferrer">GitHub ↗</a>
+        <a class="btn" href="https://t.me/mkr_infinity" target="_blank" rel="noreferrer">Telegram ↗</a>
+        <a class="btn" href="mailto:mohammadkaifraja2@gmail.com">Email ↗</a>
+      </div>
+      <ul class="stats reveal" aria-label="GitHub stats">
+        <li><b>30+</b><span>public repos</span></li>
+        <li><b>428+</b><span>stars earned</span></li>
+        <li><b>68⭐</b><span>top repository</span></li>
+        <li><b>5+</b><span>live tools</span></li>
+      </ul>
+    </section>
+
+    <!-- ===== projects ===== -->
+    <section class="section wrap" id="projects">
+      <header class="sec-head reveal">
+        <p class="kicker">01</p>
+        <h2>Missions</h2>
+        <p class="sec-sub">The builds people actually use — every one open source.</p>
+      </header>
+      <div class="grid">
+        <article class="card reveal">
+          <div class="card-top"><span class="stars">★ 68</span><span class="tag">Guide</span></div>
+          <h3><a href="https://github.com/mkr-infinity/Guide-for-flashing-GSI-to-any-device" target="_blank" rel="noreferrer">GSI Flashing Guide</a></h3>
+          <p>The fully explained guide to flashing a compatible Generic System Image to any Android device — the repo that made “brick-proof” a personality trait.</p>
+          <ul class="tech"><li>ADB</li><li>Fastboot</li><li>GSI</li><li>Linux</li></ul>
+          <a class="more" href="https://mkr-infinity.github.io/Guide-for-flashing-GSI-to-any-device/" target="_blank" rel="noreferrer">Read live ↗</a>
+        </article>
+        <article class="card reveal">
+          <div class="card-top"><span class="stars">★ 33</span><span class="tag">App</span></div>
+          <h3><a href="https://github.com/mkr-infinity/Revision-Master" target="_blank" rel="noreferrer">Revision Master</a></h3>
+          <p>A smart, offline-first study companion — flashcards, mock tests and AI-generated study tools that turn revision into structured practice.</p>
+          <ul class="tech"><li>TypeScript</li><li>React</li><li>AI</li><li>Offline-first</li></ul>
+          <a class="more" href="https://github.com/mkr-infinity/Revision-Master" target="_blank" rel="noreferrer">View repo ↗</a>
+        </article>
+        <article class="card reveal">
+          <div class="card-top"><span class="stars">★ 25</span><span class="tag">Tool</span></div>
+          <h3><a href="https://github.com/mkr-infinity/readme-hub" target="_blank" rel="noreferrer">ReadmeHub</a></h3>
+          <p>The ultimate hub for README creation — seamlessly automatic or fully hand-crafted, for repositories and GitHub profiles alike.</p>
+          <ul class="tech"><li>TypeScript</li><li>Markdown</li><li>Automation</li></ul>
+          <a class="more" href="https://github.com/mkr-infinity/readme-hub" target="_blank" rel="noreferrer">View repo ↗</a>
+        </article>
+        <article class="card reveal">
+          <div class="card-top"><span class="stars">★ 16</span><span class="tag">Android</span></div>
+          <h3><a href="https://github.com/mkr-infinity/mkr-music" target="_blank" rel="noreferrer">MKR Music</a></h3>
+          <p>A refined Material Design YouTube Music client for Android — multiple sources in one clean, ad-free listening experience.</p>
+          <ul class="tech"><li>Kotlin</li><li>Material Design</li><li>Android</li></ul>
+          <a class="more" href="https://github.com/mkr-infinity/mkr-music" target="_blank" rel="noreferrer">View repo ↗</a>
+        </article>
+        <article class="card reveal">
+          <div class="card-top"><span class="stars">Live</span><span class="tag">Web app</span></div>
+          <h3><a href="https://github.com/mkr-infinity/CalcVerse" target="_blank" rel="noreferrer">CalcVerse</a></h3>
+          <p>A modern mathematics toolkit — calculations, graphing, matrices and conversions gathered in one fast, clean interface.</p>
+          <ul class="tech"><li>TypeScript</li><li>React</li><li>Graphing</li></ul>
+          <a class="more" href="https://mkr-infinity.github.io/CalcVerse/" target="_blank" rel="noreferrer">Try live ↗</a>
+        </article>
+        <article class="card reveal">
+          <div class="card-top"><span class="stars">★ 13</span><span class="tag">Android</span></div>
+          <h3><a href="https://github.com/mkr-infinity/Solo-Ledger" target="_blank" rel="noreferrer">Solo-Ledger</a></h3>
+          <p>A very lightweight, offline-first budget tracker — private by design, no account required, easy by default.</p>
+          <ul class="tech"><li>Kotlin</li><li>Offline-first</li><li>Material Design</li></ul>
+          <a class="more" href="https://github.com/mkr-infinity/Solo-Ledger" target="_blank" rel="noreferrer">View repo ↗</a>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===== guides ===== -->
+    <section class="section wrap" id="guides">
+      <header class="sec-head reveal">
+        <p class="kicker">02</p>
+        <h2>Field Guides</h2>
+        <p class="sec-sub">The write-ups I wish had existed when I bricked my first phone.</p>
+      </header>
+      <ol class="guides">
+        <li class="guide reveal">
+          <span class="g-num">01</span>
+          <div class="g-body">
+            <h3><a href="https://github.com/mkr-infinity/Guide-for-flashing-GSI-to-any-device" target="_blank" rel="noreferrer">GSI Flashing Guide</a></h3>
+            <p>Flash a compatible Generic System Image to any device — fully explained.</p>
+          </div>
+          <span class="g-stars">★ 68</span>
+          <a class="g-live" href="https://mkr-infinity.github.io/Guide-for-flashing-GSI-to-any-device/" target="_blank" rel="noreferrer">Live ↗</a>
+        </li>
+        <li class="guide reveal">
+          <span class="g-num">02</span>
+          <div class="g-body">
+            <h3><a href="https://github.com/mkr-infinity/Guide-to-unlock-Bootloader" target="_blank" rel="noreferrer">Bootloader Unlock Guide</a></h3>
+            <p>Beginner-friendly walkthrough for unlocking any Android bootloader.</p>
+          </div>
+          <span class="g-stars">★ 27</span>
+          <a class="g-live" href="https://bootloader-unlock.vercel.app/" target="_blank" rel="noreferrer">Live ↗</a>
+        </li>
+        <li class="guide reveal">
+          <span class="g-num">03</span>
+          <div class="g-body">
+            <h3><a href="https://github.com/mkr-infinity/android-command-cheatsheet" target="_blank" rel="noreferrer">Android Command CheatSheet</a></h3>
+            <p>A beautiful, searchable reference for ADB &amp; Fastboot commands.</p>
+          </div>
+          <span class="g-stars">★ 8</span>
+          <a class="g-live" href="https://mkr-infinity.github.io/android-command-cheatsheet/" target="_blank" rel="noreferrer">Live ↗</a>
+        </li>
+        <li class="guide reveal">
+          <span class="g-num">04</span>
+          <div class="g-body">
+            <h3><a href="https://github.com/mkr-infinity/ADB-Fastboot_Drivers" target="_blank" rel="noreferrer">ADB &amp; Fastboot Drivers</a></h3>
+            <p>Official Google drivers — always installed and updated.</p>
+          </div>
+          <span class="g-stars">★ 13</span>
+        </li>
+        <li class="guide reveal">
+          <span class="g-num">05</span>
+          <div class="g-body">
+            <h3><a href="https://github.com/mkr-infinity/PhonePe-in-rooted-device" target="_blank" rel="noreferrer">PhonePe on Rooted Devices</a></h3>
+            <p>A tested method to run PhonePe on rooted devices.</p>
+          </div>
+          <span class="g-stars">★ 12</span>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ===== journey ===== -->
+    <section class="section wrap" id="journey">
+      <header class="sec-head reveal">
+        <p class="kicker">03</p>
+        <h2>Journey</h2>
+        <p class="sec-sub">Three arcs, one curiosity engine.</p>
+      </header>
+      <ol class="timeline">
+        <li class="stop reveal">
+          <span class="t-dot" aria-hidden="true"></span>
+          <p class="t-when">Season 1 — The Distro-Hopping Arc</p>
+          <h3>Flashing &amp; Breaking</h3>
+          <p>Every distro I could get my hands on. Arch, Debian, Ubuntu, Kali — installed, customized, broken, fixed, repeated.</p>
+        </li>
+        <li class="stop reveal">
+          <span class="t-dot" aria-hidden="true"></span>
+          <p class="t-when">Season 2 — The Android Arc</p>
+          <h3>Bootloaders &amp; GSIs</h3>
+          <p>Countless devices, countless bricks — all worth it. The 68⭐ GSI flashing guide and rooted-device tricks came out of this era.</p>
+        </li>
+        <li class="stop reveal">
+          <span class="t-dot" aria-hidden="true"></span>
+          <p class="t-when">Season 3 — The Builder Arc</p>
+          <h3>Open Source, Every Day</h3>
+          <p>Tools, apps and guides on GitHub — crafted by curiosity, perfected by persistence, shared with everyone.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ===== contact ===== -->
+    <section class="section wrap contact" id="contact">
+      <header class="sec-head reveal">
+        <p class="kicker">04</p>
+        <h2>Say hello</h2>
+        <p class="sec-sub">Collaborations, freelance builds or just geeking out about distros.</p>
+      </header>
+      <a class="mail reveal" href="mailto:mohammadkaifraja2@gmail.com">mohammadkaifraja2@gmail.com</a>
+      <div class="socials reveal">
+        <a class="btn" href="https://github.com/mkr-infinity" target="_blank" rel="noreferrer">GitHub ↗</a>
+        <a class="btn" href="https://t.me/mkr_infinity" target="_blank" rel="noreferrer">Telegram ↗</a>
+        <a class="btn" href="https://www.instagram.com/mkr_infinity" target="_blank" rel="noreferrer">Instagram ↗</a>
+        <a class="btn" href="https://mkr-infinity.github.io/" target="_blank" rel="noreferrer">Site ↗</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <div class="wrap foot-row">
+      <span>© <span id="year">2026</span> Mohammad Kaif Raja</span>
+      <span class="foot-note">Hand-built with HTML, CSS and a few lines of JS — no frameworks, no build step.</span>
+      <a href="https://github.com/mkr-infinity/test" target="_blank" rel="noreferrer">Source ↗</a>
+    </div>
+  </footer>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
