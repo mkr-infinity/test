@@ -442,3 +442,18 @@ html[data-accent='amber'] {
 /* ===== skip link ===== */
 .skip-link { position: fixed; top: -60px; left: 16px; z-index: 500; background: var(--red); color: #fff; padding: 12px 18px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; transition: top 0.3s var(--ease); }
 .skip-link:focus { top: 14px; }
+
+/* ===== guides ===== */
+.guides { position: relative; padding: 16vh 0 10vh; }
+.gd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; padding: 0 var(--gx); }
+.gd-card { display: flex; flex-direction: column; gap: 10px; padding: 26px 24px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.4); transition: border-color 0.3s, background 0.3s, transform 0.4s var(--ease); }
+.gd-card:hover { border-color: var(--red); background: rgba(229, 9, 20, 0.06); transform: translateY(-4px); }
+.gd-stars { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; color: var(--red); }
+.gd-card h3 { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1; letter-spacing: 0.02em; }
+.gd-card p { color: var(--muted); font-size: 14px; line-height: 1.55; flex: 1; }
+.gd-link { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #fff; border-bottom: 1px solid var(--red); align-self: flex-start; padding-bottom: 4px; transition: color 0.3s; }
+.gd-card:hover .gd-link { color: var(--red); }
+@media (max-width: 820px) {
+  .gd-grid { grid-template-columns: 1fr; }
+  .gd-card h3 { font-size: 22px; }
+}
