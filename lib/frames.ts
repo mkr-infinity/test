@@ -18,13 +18,18 @@ export function onFrameProgress(fn: (p: number) => void) {
   };
 }
 
-/** Loads coarse frames first (every 8th), then fills in, so scrubbing works almost immediately. */
+/** Loads coarse frames first (every 8th), then fills in, so scrubbing works almost immediately.
+ *  On Save-Data clients or 2G, loads only coarse frames at low concurrency. */
 export function loadFrames() {
   if (started || typeof window === 'undefined') return;
   started = true;
+  type NetInfo = { saveData?: boolean; effectiveType?: string };
+  const conn = (navigator as Navigator & { connection?: NetInfo }).connection;
+  const SAVE_DATA = !!conn?.saveData || /^(slow-)?2g$/.test(conn?.effectiveType || '');
+  const STEPS = SAVE_DATA ? [16, 8] : [16, 8, 4, 2, 1];
   const jobs: { seq: 'hero' | 'about'; i: number }[] = [];
   const seen = new Set<string>();
-  for (const step of [16, 8, 4, 2, 1]) {
+  for (const step of STEPS) {
     for (let i = 0; i < HERO_FRAMES; i += step) push('hero', i);
     push('hero', HERO_FRAMES - 1);
     for (let i = 0; i < ABOUT_FRAMES; i += step) push('about', i);
@@ -39,7 +44,7 @@ export function loadFrames() {
   const total = jobs.length;
   let done = 0;
   let cursor = 0;
-  const CONCURRENCY = 6;
+  const CONCURRENCY = SAVE_DATA ? 2 : 6;
   const next = () => {
     const job = jobs[cursor++];
     if (!job) return;
