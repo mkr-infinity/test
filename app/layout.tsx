@@ -21,13 +21,13 @@ export const metadata: Metadata = {
     url: 'https://mkr-infinity.github.io',
     siteName: 'Kakashi: Unmasked',
     type: 'website',
-    images: [{ url: '/stills/face.jpg', width: 1200, height: 630, alt: 'Kakashi: Unmasked — anime portfolio' }],
+    images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'Kakashi: Unmasked — anime portfolio' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Kakashi: Unmasked — the portfolio of Kaif Raja',
     description: 'What’s under the mask? Scroll to play.',
-    images: ['/stills/face.jpg'],
+    images: ['/og.jpg'],
   },
   icons: {
     icon: [{ url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' }],
