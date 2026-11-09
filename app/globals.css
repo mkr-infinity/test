@@ -547,3 +547,66 @@ html[data-theme='terminal'] .ms-inner, html[data-theme='terminal'] .gd-card, htm
 html[data-theme='terminal'] .story-text { transform: none; text-shadow: 0 0 14px rgba(61, 255, 110, 0.45); }
 html[data-theme='terminal'] .ms-tag { color: #a4ffc0; }
 html[data-theme='terminal'] .vp-title span { text-shadow: 0 0 14px rgba(61, 255, 110, 0.45); }
+
+/* ----- MANGA INK: white paper, ink black, comic panels — full light-mode inversion ----- */
+html[data-theme='manga'] {
+  --text: #101010;
+  --muted: #4a4a4a;
+  --dim: #8a8a8a;
+  --line: rgba(16, 16, 16, 0.22);
+  --display: 'Bangers', 'Bebas Neue', cursive;
+  --manga: 'Bangers', 'Bebas Neue', cursive;
+}
+html[data-theme='manga'] body { background: #fff; }
+html[data-theme='manga'] body::after { opacity: 0.45; animation: none; background-image: radial-gradient(rgba(16, 16, 16, 0.16) 1px, transparent 1.3px); background-size: 5px 5px; }
+html[data-theme='manga'] .backdrop { background: #fff; }
+html[data-theme='manga'] .bd-vignette { background: radial-gradient(38% 55% at 61% 52%, rgba(229, 9, 20, 0.1), rgba(229, 9, 20, 0.04) 55%, transparent 75%), radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(16, 16, 16, 0.14) 100%); }
+html[data-theme='manga'] .hero-shade { background: linear-gradient(90deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.45) 22%, transparent 40%); }
+html[data-theme='manga'] .solid-zone { background: linear-gradient(to bottom, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.4) 30%, rgba(255, 255, 255, 0.4) 70%, rgba(255, 255, 255, 0.65)); }
+html[data-theme='manga'] .solid-zone::before { background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.6)); }
+html[data-theme='manga'] .intro-half, html[data-theme='manga'] .nav-chapters, html[data-theme='manga'] .nav-theme, html[data-theme='manga'] .nav-overlay, html[data-theme='manga'] .resume-toast, html[data-theme='manga'] .vp { background: #fff; }
+html[data-theme='manga'] .nav-chapters, html[data-theme='manga'] .nav-theme, html[data-theme='manga'] .nav-overlay, html[data-theme='manga'] .resume-toast, html[data-theme='manga'] .vp-card { border-color: #101010; }
+html[data-theme='manga'] .intro-line { background: rgba(16, 16, 16, 0.15); }
+html[data-theme='manga'] .nav-overlay button { color: #4a4a4a; }
+html[data-theme='manga'] .nav-overlay button.on, html[data-theme='manga'] .nav-overlay button:hover { color: #101010; }
+html[data-theme='manga'] .subs p { color: #101010; text-shadow: none; }
+html[data-theme='manga'] .hi-log, html[data-theme='manga'] .jr-where, html[data-theme='manga'] .ars-panel li, html[data-theme='manga'] .ms-tech li { color: #333; }
+html[data-theme='manga'] .hero-meta .rec { color: #101010; }
+html[data-theme='manga'] .cue-track { background: rgba(16, 16, 16, 0.2); }
+html[data-theme='manga'] .hero-rail { background: rgba(16, 16, 16, 0.2); }
+html[data-theme='manga'] .story-text { color: #101010; text-shadow: 4px 4px 0 rgba(229, 9, 20, 0.3); }
+html[data-theme='manga'] .he-name .red { text-shadow: none; }
+html[data-theme='manga'] .flight-card b { -webkit-text-stroke: 2px #101010; color: rgba(229, 9, 20, 0.28); }
+html[data-theme='manga'] .jr-year { -webkit-text-stroke: 1px #101010; }
+html[data-theme='manga'] .gd-card, html[data-theme='manga'] .vp-card, html[data-theme='manga'] .jr-panel, html[data-theme='manga'] .ars-panel, html[data-theme='manga'] .ms-inner { background: #fff; border: 2px solid #101010; box-shadow: 6px 6px 0 rgba(16, 16, 16, 0.9); }
+html[data-theme='manga'] .gd-card:hover { transform: translate(-2px, -2px); box-shadow: 9px 9px 0 var(--red); }
+html[data-theme='manga'] .ars-panel.on { border-color: var(--red); box-shadow: 8px 8px 0 var(--red); }
+html[data-theme='manga'] .ap-idx { -webkit-text-stroke: 1px rgba(229, 9, 20, 0.7); }
+html[data-theme='manga'] .ms-media::after { background: linear-gradient(90deg, transparent 55%, #fff); }
+html[data-theme='manga'] .ms-media img { filter: grayscale(1) contrast(1.3) brightness(1.02); }
+html[data-theme='manga'] .ms-big { -webkit-text-stroke: 1.5px rgba(16, 16, 16, 0.8); }
+html[data-theme='manga'] .ms-stamp { color: #101010; background: #fff; }
+html[data-theme='manga'] .ms-duo { background: linear-gradient(135deg, rgba(229, 9, 20, 0.3), transparent 60%); }
+html[data-theme='manga'] .ms-tag { color: var(--red); }
+html[data-theme='manga'] .btn-red { border: 2px solid #101010; box-shadow: 4px 4px 0 #101010; }
+html[data-theme='manga'] .btn-red:hover { color: #fff; }
+html[data-theme='manga'] .btn-line { border-color: #101010; }
+html[data-theme='manga'] .mag { background: #fff; border-color: #101010; }
+html[data-theme='manga'] .mag:hover { background: #101010; color: #fff; }
+html[data-theme='manga'] .vp-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--vc); }
+html[data-theme='manga'] .vp-card b { color: var(--vc); }
+html[data-theme='manga'] .vp-card span { color: #4a4a4a; }
+html[data-theme='manga'] .ab-tags span { color: #101010; }
+html[data-theme='manga'] .ab-tags i { color: var(--red); }
+html[data-theme='manga'] .about-panel { background: none; }
+html[data-theme='manga'] .d-bg { stroke: rgba(16, 16, 16, 0.2); }
+html[data-theme='manga'] .d-tick { stroke: rgba(16, 16, 16, 0.3); }
+html[data-theme='manga'] .sr-i { stroke: rgba(16, 16, 16, 0.25); }
+html[data-theme='manga'] .mq-row.outline b { -webkit-text-stroke: 1px rgba(16, 16, 16, 0.6); }
+html[data-theme='manga'] .marquee { border-color: rgba(16, 16, 16, 0.4); background: rgba(229, 9, 20, 0.04); }
+html[data-theme='manga'] .fin-glow { background: radial-gradient(50% 50% at 50% 50%, rgba(229, 9, 20, 0.1), transparent 70%); }
+html[data-theme='manga'] .lb { background: #101010; }
+html[data-theme='manga'] .lb-top { border-bottom-color: rgba(16, 16, 16, 0.3); }
+html[data-theme='manga'] .lb-bot { border-top-color: rgba(16, 16, 16, 0.3); }
+html[data-theme='manga'] .rt-restart, html[data-theme='manga'] .fin-foot { color: #4a4a4a; }
+html[data-theme='manga'] .roll-row b { color: #101010; }
