@@ -392,3 +392,20 @@ html:not(.has-cursor) .cur-dot, html:not(.has-cursor) .cur-ring { display: none;
 ::-webkit-scrollbar-thumb:hover { background: var(--red); }
 html { scrollbar-width: thin; scrollbar-color: var(--red-d) #000; }
 h2 { text-wrap: balance; }
+
+/* ===== accent themes (set data-accent on <html>) ===== */
+html[data-accent='azure'] {
+  --red: #2f6fed;
+  --red-d: #1d4fb8;
+  --red-dd: #14376f;
+}
+html[data-accent='lime'] {
+  --red: #1db954;
+  --red-d: #148a3e;
+  --red-dd: #0d5c28;
+}
+html[data-accent='amber'] {
+  --red: #f5b301;
+  --red-d: #c78e00;
+  --red-dd: #8a6200;
+}
