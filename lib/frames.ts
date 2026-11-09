@@ -1,3 +1,4 @@
+import { BASE } from './paths';
 import { ABOUT_FRAMES, HERO_FRAMES, HERO_SKIP, live } from './store';
 
 type Seq = (HTMLImageElement | null)[];
@@ -50,7 +51,7 @@ export function loadFrames() {
     if (!job) return;
     const img = new Image();
     img.decoding = 'async';
-    img.src = `/frames/${job.seq}-hd/${pad(job.i + 1 + (job.seq === 'hero' ? HERO_SKIP : 0))}.webp`;
+    img.src = `${BASE}/frames/${job.seq}-hd/${pad(job.i + 1 + (job.seq === 'hero' ? HERO_SKIP : 0))}.webp`;
     const finish = () => {
       done++;
       live.frameProgress = done / total;
