@@ -15,6 +15,22 @@ export default function NotFound() {
         overflow: 'hidden',
       }}
     >
+      <img
+        src="/stills/masked.jpg"
+        alt=""
+        aria-hidden
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          height: '100%',
+          width: '52%',
+          objectFit: 'cover',
+          opacity: 0.5,
+          maskImage: 'linear-gradient(to right, transparent, black 55%)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent, black 55%)',
+        }}
+      />
       <div
         aria-hidden
         style={{
