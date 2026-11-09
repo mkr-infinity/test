@@ -59,7 +59,7 @@ export default function Honors() {
         ))}
       </div>
 
-      <div className="marquee" aria-label="Certifications">
+      <div className="marquee" aria-label="The toolbox — projects and tools">
         <div className="mq-row" ref={rowA}>
           {certs.map((c, i) => (
             <span key={i} className="mq-item">
