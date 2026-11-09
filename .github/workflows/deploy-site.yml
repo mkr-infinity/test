@@ -1,0 +1,36 @@
+name: Deploy site
+
+# Framework-free static portfolio — no build step.
+# Collects the site files and publishes them to GitHub Pages in one job.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect site files
+        run: |
+          mkdir -p out
+          cp index.html styles.css script.js robots.txt sitemap.xml manifest.webmanifest .nojekyll out/
+          cp -r assets out/assets
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
