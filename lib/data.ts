@@ -195,6 +195,7 @@ export const GUIDES = [
     stars: 68,
     tagline: 'The fully explained guide to flashing a compatible Generic System Image to any device.',
     url: 'https://github.com/mkr-infinity/Guide-for-flashing-GSI-to-any-device',
+    live: 'https://mkr-infinity.github.io/Guide-for-flashing-GSI-to-any-device/',
   },
   {
     id: 'bootloader',
@@ -202,6 +203,7 @@ export const GUIDES = [
     stars: 27,
     tagline: 'Beginner-friendly walkthrough for unlocking the bootloader on any Android device.',
     url: 'https://github.com/mkr-infinity/Guide-to-unlock-Bootloader',
+    live: 'https://bootloader-unlock.vercel.app/',
   },
   {
     id: 'drivers',
@@ -216,6 +218,7 @@ export const GUIDES = [
     stars: 8,
     tagline: 'A beautiful, searchable reference for ADB & Fastboot commands — live tool included.',
     url: 'https://github.com/mkr-infinity/android-command-cheatsheet',
+    live: 'https://mkr-infinity.github.io/android-command-cheatsheet/',
   },
   {
     id: 'phonepe',

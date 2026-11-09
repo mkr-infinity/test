@@ -14,11 +14,8 @@ export default function Guides() {
       </header>
       <div className="gd-grid">
         {GUIDES.map((g, i) => (
-          <motion.a
+          <motion.div
             key={g.id}
-            href={g.url}
-            target="_blank"
-            rel="noreferrer"
             className="gd-card"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -26,10 +23,23 @@ export default function Guides() {
             transition={{ delay: i * 0.08, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
             <span className="gd-stars">★ {g.stars}</span>
-            <h3>{g.name}</h3>
+            <h3>
+              <a href={g.url} target="_blank" rel="noreferrer">
+                {g.name}
+              </a>
+            </h3>
             <p>{g.tagline}</p>
-            <span className="gd-link">Read the guide ↗</span>
-          </motion.a>
+            <div className="gd-links">
+              <a className="gd-link" href={g.url} target="_blank" rel="noreferrer">
+                Read the guide ↗
+              </a>
+              {g.live && (
+                <a className="gd-link gd-live" href={g.live} target="_blank" rel="noreferrer">
+                  Try live ↗
+                </a>
+              )}
+            </div>
+          </motion.div>
         ))}
       </div>
     </section>

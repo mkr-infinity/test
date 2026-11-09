@@ -453,6 +453,11 @@ html[data-accent='amber'] {
 .gd-card p { color: var(--muted); font-size: 14px; line-height: 1.55; flex: 1; }
 .gd-link { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #fff; border-bottom: 1px solid var(--red); align-self: flex-start; padding-bottom: 4px; transition: color 0.3s; }
 .gd-card:hover .gd-link { color: var(--red); }
+.gd-links { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+.gd-links .gd-link { align-self: auto; }
+.gd-live { color: var(--red); border-bottom-color: rgba(229, 9, 20, 0.5); }
+.gd-card h3 a { color: inherit; transition: color 0.3s; }
+.gd-card h3 a:hover { color: var(--red); }
 @media (max-width: 820px) {
   .gd-grid { grid-template-columns: 1fr; }
   .gd-card h3 { font-size: 22px; }
