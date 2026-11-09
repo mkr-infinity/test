@@ -16,20 +16,28 @@ export const CHAPTERS = [
   { id: 'contact', label: 'Finale' },
 ];
 
-const ACCENTS = ['crimson', 'azure', 'lime', 'amber'] as const;
-type Accent = (typeof ACCENTS)[number];
-const ACCENT_LABEL: Record<Accent, string> = { crimson: 'Crimson', azure: 'Azure', lime: 'Lime', amber: 'Amber' };
+const THEMES = [
+  { id: 'cinema', label: 'Cinema', dot: '#e50914' },
+  { id: 'arcade', label: 'Arcade', dot: '#00f0ff' },
+  { id: 'manga', label: 'Manga', dot: '#101010' },
+  { id: 'noir', label: 'Noir', dot: '#9a2b2b' },
+  { id: 'terminal', label: 'Terminal', dot: '#3dff6e' },
+] as const;
+type Theme = (typeof THEMES)[number]['id'];
+const THEME_LABEL: Record<Theme, string> = { cinema: 'Cinema', arcade: 'Arcade', manga: 'Manga', noir: 'Noir', terminal: 'Terminal' };
+const THEME_DOT: Record<Theme, string> = { cinema: '#e50914', arcade: '#00f0ff', manga: '#101010', noir: '#9a2b2b', terminal: '#3dff6e' };
+const THEME_KEY = 'unmasked-theme';
 
 export default function TopNav({ show }: { show: boolean }) {
   const [active, setActive] = useState(0);
-  const [accent, setAccent] = useState<Accent>('crimson');
+  const [theme, setTheme] = useState<Theme>('cinema');
   const [menuOpen, setMenuOpen] = useState(false);
   const bar = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const saved = window.localStorage.getItem('accent') as Accent | null;
-    if (saved && ACCENTS.includes(saved)) {
-      setAccent(saved);
-      if (saved !== 'crimson') document.documentElement.dataset.accent = saved;
+    const saved = window.localStorage.getItem(THEME_KEY) as Theme | null;
+    if (saved && THEMES.some((t) => t.id === saved)) {
+      setTheme(saved);
+      if (saved !== 'cinema') document.documentElement.dataset.theme = saved;
     }
   }, []);
   const burgerRef = useRef<HTMLButtonElement>(null);
@@ -69,12 +77,12 @@ export default function TopNav({ show }: { show: boolean }) {
     setMenuOpen(false);
     scrollToId(id);
   };
-  const cycleAccent = () => {
-    const next = ACCENTS[(ACCENTS.indexOf(accent) + 1) % ACCENTS.length];
-    setAccent(next);
-    if (next === 'crimson') delete document.documentElement.dataset.accent;
-    else document.documentElement.dataset.accent = next;
-    window.localStorage.setItem('accent', next);
+  const cycleTheme = () => {
+    const next = THEMES[(THEMES.findIndex((t) => t.id === theme) + 1) % THEMES.length].id;
+    setTheme(next);
+    if (next === 'cinema') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = next;
+    window.localStorage.setItem(THEME_KEY, next);
   };
   const activeRef = useRef(0);
   useEffect(() => {
@@ -106,13 +114,13 @@ export default function TopNav({ show }: { show: boolean }) {
         const next = Math.min(CHAPTERS.length - 1, Math.max(0, activeRef.current + dir));
         scrollToId(CHAPTERS[next].id);
       } else if (e.key.toLowerCase() === 't') {
-        cycleAccent();
+        cycleTheme();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accent]);
+  }, [theme]);
 
   return (
     <motion.header className="nav" initial={{ y: -40, opacity: 0 }} animate={{ y: show ? 0 : -40, opacity: show ? 1 : 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
@@ -143,9 +151,9 @@ export default function TopNav({ show }: { show: boolean }) {
           </button>
         ))}
       </nav>
-      <button className="nav-theme" onClick={cycleAccent} aria-label={`Accent theme: ${ACCENT_LABEL[accent]}. Switch theme`}>
-        <i data-accent-dot={accent} />
-        <span>{ACCENT_LABEL[accent]}</span>
+      <button className="nav-theme" onClick={cycleTheme} aria-label={`Theme: ${THEME_LABEL[theme]}. Switch skin`}>
+        <i style={{ background: THEME_DOT[theme] }} />
+        <span>{THEME_LABEL[theme]}</span>
       </button>
       <a className="nav-cta" href={`mailto:${PROFILE.email}`}>
         <span>Hire me</span>
