@@ -1,0 +1,19 @@
+name: Quality
+
+# Manual-only by design: this repo has no CI that auto-triggers on push.
+# Run it from the Actions tab ("Run workflow") whenever you want a check.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
