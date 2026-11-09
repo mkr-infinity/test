@@ -51,6 +51,7 @@ export default function TopNav({ show }: { show: boolean }) {
     else document.documentElement.dataset.accent = next;
     window.localStorage.setItem('accent', next);
   };
+  const activeRef = useRef(0);
   useEffect(() => {
     let raf = 0;
     const t = () => {
@@ -62,12 +63,31 @@ export default function TopNav({ show }: { show: boolean }) {
         const el = document.getElementById(c.id);
         if (el && el.getBoundingClientRect().top <= mid) a = i;
       });
+      activeRef.current = a;
       setActive((x) => (x === a ? x : a));
       raf = requestAnimationFrame(t);
     };
     raf = requestAnimationFrame(t);
     return () => cancelAnimationFrame(raf);
   }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const dir = e.key === 'ArrowRight' ? 1 : -1;
+        const next = Math.min(CHAPTERS.length - 1, Math.max(0, activeRef.current + dir));
+        scrollToId(CHAPTERS[next].id);
+      } else if (e.key.toLowerCase() === 't') {
+        cycleAccent();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accent]);
 
   return (
     <motion.header className="nav" initial={{ y: -40, opacity: 0 }} animate={{ y: show ? 0 : -40, opacity: show ? 1 : 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
