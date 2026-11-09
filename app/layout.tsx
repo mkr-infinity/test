@@ -33,6 +33,7 @@ export const metadata: Metadata = {
     icon: [{ url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' }],
     apple: '/apple-touch-icon.png',
   },
+  manifest: '/manifest.webmanifest',
   colorScheme: 'dark',
 };
 
