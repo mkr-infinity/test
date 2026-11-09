@@ -29,7 +29,10 @@ export const metadata: Metadata = {
     description: 'What’s under the mask? Scroll to play.',
     images: ['/stills/face.jpg'],
   },
-  icons: { icon: '/stills/masked.jpg' },
+  icons: {
+    icon: [{ url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' }],
+    apple: '/apple-touch-icon.png',
+  },
   colorScheme: 'dark',
 };
 
