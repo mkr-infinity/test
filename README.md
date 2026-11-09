@@ -1,5 +1,7 @@
 # Kakashi: Unmasked 🍥 — an anime-movie portfolio
 
+![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=nextdotjs) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white) ![React Three Fiber](https://img.shields.io/badge/React_Three_Fiber-8-e50914) ![License](https://img.shields.io/badge/license-MIT-e50914) ![CI](https://img.shields.io/badge/CI-manual_only-6d6d6d)
+
 A cinematic, scroll-driven portfolio that plays like an anime film. Scroll to play the scene, stop and time stops with you, scroll up to rewind. Red smoke, a 3D skill drum, stacking mission cards, spinning seals and a credits roll at the end.
 
 **More projects & guides:** [github.com/mkr-infinity](https://github.com/mkr-infinity) · [mkr-infinity.github.io](https://mkr-infinity.github.io/)
