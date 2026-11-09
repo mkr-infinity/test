@@ -14,9 +14,13 @@ A cinematic, scroll-driven portfolio that plays like an anime film. Scroll to pl
 - 🥷 **3D WebGL stage** — React Three Fiber character backdrop with postprocessing
 - 🎨 **4 accent themes** — Crimson / Azure / Lime / Amber, switchable from the nav, persisted in `localStorage`
 - ⌨️ **Keyboard shortcuts** — `←`/`→` jump between chapters, `T` cycles the accent theme
-- 📱 **Fully responsive** — tuned for desktop, tablet and small phones (down to 320px)
-- ♿ **Accessible** — keyboard focus styles, `aria-current`, `prefers-reduced-motion` support, touch-safe cursor
-- 🔍 **SEO-ready** — metadata, OpenGraph/Twitter cards, robots.txt + sitemap, themed 404
+- 🛰 **Field Guides chapter** — the real guide repos as first-class content
+- ▶️ **Continue watching** — scroll progress persists per visitor; they can resume like a streaming app
+- 📉 **Data-saver mode** — honors `Save-Data`/2G by loading fewer frames at low concurrency
+- 🥚 **Easter eggs** — styled console message, ⏸ tab title when the visitor switches away
+- 📱 **Fully responsive** — hamburger chapters menu on mobile, tuned down to 320px
+- ♿ **Accessible** — focus-visible styles, focus trap + inert menu, skip link, `aria-current`, `prefers-reduced-motion`, touch-safe cursor
+- 🔍 **SEO-ready** — metadata, OpenGraph/Twitter cards with a designed banner, JSON-LD, robots.txt + sitemap, themed 404, PWA manifest
 - 🛠 **Manual-only CI** — a `workflow_dispatch` quality workflow (typecheck + build); nothing runs on push
 
 ## Tech Stack
@@ -48,9 +52,9 @@ A cinematic, scroll-driven portfolio that plays like an anime film. Scroll to pl
 ```
 app/                  # Next.js App Router pages, layout, global styles
 components/
-  sections/           # The movie: Billboard, Missions, Arsenal, Journey, Honors, Finale…
+  sections/           # The movie: Billboard, Missions, Arsenal, Journey, Honors, Guides, Finale…
   stage/              # WebGL character stage and backdrop
-  ui/                 # Nav, intro, custom cursor, smooth scroll
+  ui/                 # Nav, intro, custom cursor, smooth scroll, resume toast, easter eggs
 lib/
   data.ts             # ✏️ ALL your content lives here
   frames.ts / store.ts / useScroll.ts   # Frame sequencing & scroll plumbing
