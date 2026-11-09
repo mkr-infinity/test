@@ -47,6 +47,11 @@ export default function Backdrop() {
     const cv = ref.current!;
     const gl = cv.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'low-power' });
     if (!gl) return;
+    type NetInfo = { saveData?: boolean; effectiveType?: string };
+    const conn = (navigator as Navigator & { connection?: NetInfo }).connection;
+    const SKIP_WEBGL = !!conn?.saveData || /^(slow-)?2g$/.test(conn?.effectiveType || '');
+    const STATIC_ONLY = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (SKIP_WEBGL) return; // static CSS vignette remains as the backdrop
     const sh = (type: number, src: string) => {
       const s = gl.createShader(type)!;
       gl.shaderSource(s, src);
@@ -80,6 +85,24 @@ export default function Backdrop() {
     let raf = 0;
     let mx = 0.5, my = 0.5, s = 0, inten = 0;
     const start = performance.now();
+    if (STATIC_ONLY) {
+      // one calm frame, re-rendered only on resize — no continuous animation
+      const drawStatic = () => {
+        gl.uniform2f(uRes, cv.width, cv.height);
+        gl.uniform1f(uT, 14);
+        gl.uniform2f(uM, 0.5, 0.5);
+        gl.uniform1f(uS, 0);
+        gl.uniform1f(uI, 0.85);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      };
+      const onResize = () => {
+        resize();
+        drawStatic();
+      };
+      drawStatic();
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }
     const loop = () => {
       const tx = (live.mouse.x + 1) / 2;
       const ty = 1 - (live.mouse.y + 1) / 2;
