@@ -360,3 +360,12 @@ html:not(.has-cursor) .cur-dot, html:not(.has-cursor) .cur-ring { display: none;
   .story { top: auto; bottom: 9vh; transform: none; width: auto; right: var(--gx); }
   .story-text { font-size: 11vw; }
 }
+
+/* ===== accessibility ===== */
+:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+@media (pointer: coarse) {
+  html.has-cursor, html.has-cursor * { cursor: auto !important; }
+}
