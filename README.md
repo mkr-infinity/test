@@ -33,7 +33,7 @@ Everything is plain files — open and edit:
 
 ## Deploying
 
-GitHub Pages does it: `.github/workflows/deploy-pages.yml` copies the site files and publishes on every push to `main` (or manually from the Actions tab). No build, no npm — the workflow just collects static files.
+GitHub Pages does it: `.github/workflows/deploy-site.yml` copies the site files and publishes on every push to `main` (or manually from the Actions tab). No build, no npm — the workflow just collects static files.
 
 ---
 
