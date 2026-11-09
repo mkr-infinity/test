@@ -1,6 +1,7 @@
 name: Deploy to GitHub Pages
 
-# Builds the static export under /test/ and publishes it to GitHub Pages.
+# The site is framework-free static files — no build step.
+# Copies the site files into ./out and publishes them to GitHub Pages.
 on:
   workflow_dispatch:
   push:
@@ -20,14 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-        env:
-          NEXT_PUBLIC_BASE_PATH: /test
+      - name: Collect site files
+        run: |
+          mkdir -p out
+          cp index.html styles.css script.js robots.txt sitemap.xml manifest.webmanifest .nojekyll out/
+          cp -r assets out/assets
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

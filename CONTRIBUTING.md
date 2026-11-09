@@ -1,36 +1,25 @@
 # Contributing
 
-Thanks for stopping by 👋 This is a personal portfolio, but issues, ideas and
-improvements are always welcome.
+Thanks for stopping by 👋 This portfolio is **framework-free static files** — no build step, no dependencies, nothing to install.
 
-## Getting started
+## Editing
 
-```bash
-git clone https://github.com/mkr-infinity/test.git
-cd test
-nvm use                 # or a Node 20.x runtime
-npm install
-npm run dev
-```
+- `index.html` — all content and structure
+- `styles.css` — design tokens live at the top (`:root` for dark, `html[data-theme='light']` for light)
+- `script.js` — theme toggle + scroll reveal only; keep it tiny
 
 ## Before you open a PR
 
-1. **Check the typechecker**: `npm run typecheck`
-2. **Build to verify**: `npm run build`
-3. Keep changes focused — one PR, one idea.
-4. If it changes content, it probably belongs in `lib/data.ts`, not a component.
+1. Open `index.html` in a browser and check **both themes** (header toggle).
+2. Check it on a phone-width viewport.
+3. Keep payloads tiny: no font files, no icon libraries, no frameworks. Use system fonts and inline SVG.
 
-## Code style
+## Conventions
 
-- The site is a client-side, scroll-driven film. UI motion belongs in
-  [Framer Motion](https://www.framer.com/motion/) + the CSS in `app/globals.css`.
-- New colors should derive from the accent variables (`--red / --red-d / --red-dd`)
-  so theme switching keeps working.
-- Accessibility: keyboard focus (`:focus-visible`) and `prefers-reduced-motion`
-  are respected globally — please don't regress them.
+- Colors flow through the CSS custom properties — never hard-code hex values in component rules.
+- `prefers-reduced-motion` is respected globally; new animations must be too.
+- Accessibility isn't optional: semantic HTML, visible focus, labelled controls.
 
 ## CI
 
-There is no auto-triggered CI. A manual quality workflow
-(`.github/workflows/quality.yml`) can be run from the Actions tab; it runs
-typecheck + build.
+There is no build. `.github/workflows/deploy-pages.yml` publishes to GitHub Pages on every push to `main` — your PR goes live the moment it merges, so make it count.
