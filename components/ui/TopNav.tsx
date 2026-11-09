@@ -22,6 +22,7 @@ const ACCENT_LABEL: Record<Accent, string> = { crimson: 'Crimson', azure: 'Azure
 export default function TopNav({ show }: { show: boolean }) {
   const [active, setActive] = useState(0);
   const [accent, setAccent] = useState<Accent>('crimson');
+  const [menuOpen, setMenuOpen] = useState(false);
   const bar = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const saved = window.localStorage.getItem('accent') as Accent | null;
@@ -30,6 +31,18 @@ export default function TopNav({ show }: { show: boolean }) {
       if (saved !== 'crimson') document.documentElement.dataset.accent = saved;
     }
   }, []);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+  const goChapter = (id: string) => {
+    setMenuOpen(false);
+    scrollToId(id);
+  };
   const cycleAccent = () => {
     const next = ACCENTS[(ACCENTS.indexOf(accent) + 1) % ACCENTS.length];
     setAccent(next);
@@ -65,6 +78,16 @@ export default function TopNav({ show }: { show: boolean }) {
           <small>{PROFILE.role}</small>
         </span>
       </button>
+      <button
+        className="nav-burger"
+        aria-expanded={menuOpen}
+        aria-label={menuOpen ? 'Close chapters menu' : 'Open chapters menu'}
+        onClick={() => setMenuOpen((o) => !o)}
+      >
+        <i />
+        <i />
+        <i />
+      </button>
       <nav className="nav-chapters" aria-label="Chapters">
         {CHAPTERS.map((c, i) => (
           <button key={c.id} className={i === active ? 'on' : ''} aria-current={i === active ? 'true' : undefined} onClick={() => scrollToId(c.id)}>
@@ -80,6 +103,16 @@ export default function TopNav({ show }: { show: boolean }) {
       <a className="nav-cta" href={`mailto:${PROFILE.email}`}>
         <span>Hire me</span>
       </a>
+      {menuOpen && (
+        <div className="nav-overlay" role="dialog" aria-modal="true" aria-label="Chapters menu">
+          {CHAPTERS.map((c, i) => (
+            <button key={c.id} className={i === active ? 'on' : ''} aria-current={i === active ? 'true' : undefined} onClick={() => goChapter(c.id)}>
+              <i>{String(i).padStart(2, '0')}</i>
+              <span>{c.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </motion.header>
   );
 }
