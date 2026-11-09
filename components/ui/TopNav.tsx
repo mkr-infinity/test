@@ -11,6 +11,7 @@ export const CHAPTERS = [
   { id: 'skills', label: 'Arsenal' },
   { id: 'projects', label: 'Missions' },
   { id: 'honors', label: 'Honors' },
+  { id: 'guides', label: 'Guides' },
   { id: 'journey', label: 'Journey' },
   { id: 'contact', label: 'Finale' },
 ];
