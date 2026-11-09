@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **5 full website skins** — the theme switcher now cycles whole-website styles, each replacing palette, font system, background world and structural treatment ([#51](https://github.com/mkr-infinity/test/pull/51)–[#54](https://github.com/mkr-infinity/test/pull/54)):
+  - **Cinema** (default) — the original crimson film look
+  - **Arcade** — neon cyan on synth black, mono type everywhere, glow shadows
+  - **Manga Ink** — white paper, ink-black comic panels, halftone dots, hard offset shadows (full light mode)
+  - **Editorial Noir** — cream paper, Georgia serif throughout, muted burgundy, magazine typography (full light mode)
+  - **Terminal** — phosphor green CRT with scanlines and outline buttons
+- **"Who's watching?" viewer gate** — the previously unused `VIEWERS` personas now render as a Netflix-style profile picker, remembered per visitor ([#47](https://github.com/mkr-infinity/test/pull/47))
+- Missions expanded to **6 real episodes** — ReadmeHub, CalcVerse and Solo-Ledger join the board ([#41](https://github.com/mkr-infinity/test/pull/41))
+- "Try live ↗" links on guides with live deployments ([#48](https://github.com/mkr-infinity/test/pull/48))
+- Console easter egg and ⏸ tab-pause title ([#40](https://github.com/mkr-infinity/test/pull/40), [#44](https://github.com/mkr-infinity/test/pull/44))
+- Data-saver mode: `Save-Data`/2G clients load fewer frames at low concurrency ([#42](https://github.com/mkr-infinity/test/pull/42))
+- Focus trap + `inert` background for the mobile menu ([#43](https://github.com/mkr-infinity/test/pull/43))
+- Instagram contact link ([#45](https://github.com/mkr-infinity/test/pull/45))
+- `.gitattributes` hygiene and apple-web-app metadata ([#50](https://github.com/mkr-infinity/test/pull/50), [#49](https://github.com/mkr-infinity/test/pull/49))
+
+### Changed
+- Accent color cycle replaced by the skin system; the `T` shortcut and nav button now cycle skins ([#54](https://github.com/mkr-infinity/test/pull/54))
+- README features/structure docs refreshed ([#46](https://github.com/mkr-infinity/test/pull/46), [#55](https://github.com/mkr-infinity/test/pull/55))
+
 ## [1.1.0] — 2026-11-09
 
 ### Added
