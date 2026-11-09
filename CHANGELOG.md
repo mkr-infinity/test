@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Lightweight for low-end devices** — unused Inter 700/800 font files removed, Bangers display font preloaded, static fog frame under `prefers-reduced-motion`, no WebGL fog on `Save-Data`/2G, `≥44px` tap targets on touch devices, landscape-phone layout tuning ([#56](https://github.com/mkr-infinity/test/pull/56)–[#58](https://github.com/mkr-infinity/test/pull/58))
 - **5 full website skins** — the theme switcher now cycles whole-website styles, each replacing palette, font system, background world and structural treatment ([#51](https://github.com/mkr-infinity/test/pull/51)–[#54](https://github.com/mkr-infinity/test/pull/54)):
   - **Cinema** (default) — the original crimson film look
   - **Arcade** — neon cyan on synth black, mono type everywhere, glow shadows
