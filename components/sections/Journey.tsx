@@ -43,7 +43,7 @@ export default function Journey() {
           {items.map((it, i) => (
             <article key={it.title} className="jr-panel">
               <div className="jr-img">
-                <img src={it.still} alt="" loading="lazy" />
+                <img src={it.still} alt="" loading="lazy" decoding="async" />
               </div>
               <div className="jr-text">
                 <span className="jr-arc">
