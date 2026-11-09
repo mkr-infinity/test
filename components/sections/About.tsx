@@ -106,7 +106,7 @@ export default function About() {
             ))}
           </div>
           <a className="ab-resume" href={PROFILE.resume} target="_blank" rel="noreferrer" style={step(p, 0.78)}>
-            Read the full script (résumé) <span>↗</span>
+            Browse all missions (GitHub) <span>↗</span>
           </a>
         </div>
         <div className="ab-progress">

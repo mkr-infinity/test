@@ -62,7 +62,7 @@ export default function Billboard({ ready }: { ready: boolean }) {
                 <Words text={PROFILE.subtitle} delay={0.65} className="t2" />
               </h1>
               <motion.p className="hi-role" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1, duration: 0.9, ease: EASE }}>
-                {PROFILE.role} <span>·</span> React <span>·</span> Node <span>·</span> System Design
+                {PROFILE.role} <span>·</span> Linux <span>·</span> Android <span>·</span> Open Source
               </motion.p>
               <motion.p className="hi-log" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.25, duration: 0.9, ease: EASE }}>
                 Everyone wanted to know what was under the mask. Scroll, and the scene plays frame by frame. Stop, and time stops with you.
@@ -142,7 +142,7 @@ export default function Billboard({ ready }: { ready: boolean }) {
               </h2>
               <motion.i className="he-slash" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.6, duration: 0.9, ease: EASE }} />
               <motion.p className="he-role" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}>
-                {PROFILE.role} — keep scrolling, he’s coming down.
+                {PROFILE.role} — keep scrolling, they’re coming down.
               </motion.p>
             </motion.div>
           )}
