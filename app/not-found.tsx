@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BASE } from '@/lib/paths';
 
 export default function NotFound() {
   return (
@@ -16,7 +17,7 @@ export default function NotFound() {
       }}
     >
       <img
-        src="/stills/masked.jpg"
+        src={`${BASE}/stills/masked.jpg`}
         alt=""
         aria-hidden
         style={{

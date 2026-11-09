@@ -1,7 +1,6 @@
 /* ============================================================
    UNMASKED — anime-film portfolio.  Palette: Netflix reds only.
    ============================================================ */
-@font-face { font-family: 'Bangers'; src: url('/fonts/bangers.woff2') format('woff2'); font-display: swap; }
 :root {
   --bg: #000;
   --ink: #141414;

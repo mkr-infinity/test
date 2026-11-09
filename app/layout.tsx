@@ -6,9 +6,10 @@ import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/jetbrains-mono/400.css';
 import './globals.css';
+import { BASE, SITE } from '@/lib/paths';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://mkr-infinity.github.io'),
+  metadataBase: new URL(SITE + BASE),
   title: 'Mohammad Kaif Raja · Unmasked · System Optimizer & Open-Source Builder',
   description:
     'Everyone wanted to know what’s under the mask. Scroll to play the episode — Android flashing, Linux tweaking and open-source building, directed by curiosity.',
@@ -20,19 +21,19 @@ export const metadata: Metadata = {
     url: 'https://mkr-infinity.github.io',
     siteName: 'Kakashi: Unmasked',
     type: 'website',
-    images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'Kakashi: Unmasked — anime portfolio' }],
+    images: [{ url: `${BASE}/og.jpg`, width: 1200, height: 630, alt: 'Kakashi: Unmasked — anime portfolio' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Kakashi: Unmasked — the portfolio of Kaif Raja',
     description: 'What’s under the mask? Scroll to play.',
-    images: ['/og.jpg'],
+    images: [`${BASE}/og.jpg`],
   },
   icons: {
-    icon: [{ url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' }],
-    apple: '/apple-touch-icon.png',
+    icon: [{ url: `${BASE}/favicon.ico`, sizes: '48x48', type: 'image/x-icon' }],
+    apple: `${BASE}/apple-touch-icon.png`,
   },
-  manifest: '/manifest.webmanifest',
+  manifest: `${BASE}/manifest.webmanifest`,
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -44,10 +45,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: '#000000', width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  preload('/fonts/bangers.woff2', { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' });
+  preload(`${BASE}/fonts/bangers.woff2`, { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' });
   return (
     <html lang="en">
       <body>
+        <style dangerouslySetInnerHTML={{ __html: `@font-face{font-family:'Bangers';src:url('${BASE}/fonts/bangers.woff2') format('woff2');font-display:swap}` }} />
         <a href="#top" className="skip-link">
           Skip to content
         </a>
