@@ -438,3 +438,7 @@ html[data-accent='amber'] {
   .nav-overlay button:hover, .nav-overlay button.on { color: #fff; }
   .nav-overlay button i { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--red); letter-spacing: 0.2em; }
 }
+
+/* ===== skip link ===== */
+.skip-link { position: fixed; top: -60px; left: 16px; z-index: 500; background: var(--red); color: #fff; padding: 12px 18px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; transition: top 0.3s var(--ease); }
+.skip-link:focus { top: 14px; }
