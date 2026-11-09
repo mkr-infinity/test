@@ -32,10 +32,35 @@ export default function TopNav({ show }: { show: boolean }) {
       if (saved !== 'crimson') document.documentElement.dataset.accent = saved;
     }
   }, []);
+  const burgerRef = useRef<HTMLButtonElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const main = document.getElementById('top');
+    if (menuOpen) {
+      main?.setAttribute('inert', '');
+      overlayRef.current?.querySelectorAll<HTMLElement>('button')[0]?.focus();
+    } else {
+      main?.removeAttribute('inert');
+    }
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false);
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        burgerRef.current?.focus();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const items = Array.from(overlayRef.current?.querySelectorAll<HTMLElement>('button') ?? []);
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -100,6 +125,7 @@ export default function TopNav({ show }: { show: boolean }) {
         </span>
       </button>
       <button
+        ref={burgerRef}
         className="nav-burger"
         aria-expanded={menuOpen}
         aria-label={menuOpen ? 'Close chapters menu' : 'Open chapters menu'}
@@ -125,7 +151,7 @@ export default function TopNav({ show }: { show: boolean }) {
         <span>Hire me</span>
       </a>
       {menuOpen && (
-        <div className="nav-overlay" role="dialog" aria-modal="true" aria-label="Chapters menu">
+        <div ref={overlayRef} className="nav-overlay" role="dialog" aria-modal="true" aria-label="Chapters menu">
           {CHAPTERS.map((c, i) => (
             <button key={c.id} className={i === active ? 'on' : ''} aria-current={i === active ? 'true' : undefined} onClick={() => goChapter(c.id)}>
               <i>{String(i).padStart(2, '0')}</i>
