@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from 'next';
+import { preload } from 'react-dom';
 import '@fontsource/bebas-neue/400.css';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
-import '@fontsource/inter/700.css';
-import '@fontsource/inter/800.css';
 import '@fontsource/jetbrains-mono/400.css';
 import './globals.css';
 
@@ -45,6 +44,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: '#000000', width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  preload('/fonts/bangers.woff2', { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' });
   return (
     <html lang="en">
       <body>
