@@ -610,3 +610,70 @@ html[data-theme='manga'] .lb-top { border-bottom-color: rgba(16, 16, 16, 0.3); }
 html[data-theme='manga'] .lb-bot { border-top-color: rgba(16, 16, 16, 0.3); }
 html[data-theme='manga'] .rt-restart, html[data-theme='manga'] .fin-foot { color: #4a4a4a; }
 html[data-theme='manga'] .roll-row b { color: #101010; }
+
+/* ----- EDITORIAL NOIR: cream paper, serif type, muted burgundy — magazine treatment ----- */
+html[data-theme='noir'] {
+  --text: #1c1917;
+  --muted: #6b625a;
+  --dim: #9b9188;
+  --line: rgba(28, 25, 23, 0.2);
+  --red: #9a2b2b;
+  --red-d: #7d2121;
+  --red-dd: #571717;
+  --display: Georgia, 'Times New Roman', serif;
+  --manga: Georgia, 'Times New Roman', serif;
+  --body: Georgia, 'Times New Roman', serif;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+html[data-theme='noir'] body { background: #f5f1ea; }
+html[data-theme='noir'] body::after { opacity: 0.035; animation: none; }
+html[data-theme='noir'] .backdrop { background: #f5f1ea; }
+html[data-theme='noir'] .bd-vignette { background: radial-gradient(38% 55% at 61% 52%, rgba(154, 43, 43, 0.1), transparent 70%), radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(28, 25, 23, 0.12) 100%); }
+html[data-theme='noir'] .hero-shade { background: linear-gradient(90deg, rgba(245, 241, 234, 0.88) 0%, rgba(245, 241, 234, 0.45) 22%, transparent 40%); }
+html[data-theme='noir'] .solid-zone { background: linear-gradient(to bottom, rgba(245, 241, 234, 0.6), rgba(245, 241, 234, 0.4) 30%, rgba(245, 241, 234, 0.4) 70%, rgba(245, 241, 234, 0.65)); }
+html[data-theme='noir'] .solid-zone::before { background: linear-gradient(to bottom, transparent, rgba(245, 241, 234, 0.6)); }
+html[data-theme='noir'] h2 { letter-spacing: 0; font-weight: 400; }
+html[data-theme='noir'] .story-text { transform: none; text-shadow: none; font-style: italic; letter-spacing: 0; }
+html[data-theme='noir'] .story-brush { clip-path: none; height: 3px; background: var(--red); box-shadow: none; }
+html[data-theme='noir'] .hi-title .t1, html[data-theme='noir'] .he-name { letter-spacing: 0; }
+html[data-theme='noir'] .hi-title .t2 { letter-spacing: 0.18em; text-shadow: none; }
+html[data-theme='noir'] .eyebrow { letter-spacing: 0.3em; }
+html[data-theme='noir'] .subs p { color: #1c1917; text-shadow: none; font-weight: 400; }
+html[data-theme='noir'] .btn-red { clip-path: none; border-radius: 999px; background: #1c1917; box-shadow: none; }
+html[data-theme='noir'] .btn-red:hover { color: #fff; }
+html[data-theme='noir'] .btn-line { border-radius: 999px; }
+html[data-theme='noir'] .mag { background: transparent; border-color: rgba(28, 25, 23, 0.4); }
+html[data-theme='noir'] .mag.primary { background: var(--red); border-color: var(--red); color: #fff; }
+html[data-theme='noir'] .ms-inner, html[data-theme='noir'] .jr-panel, html[data-theme='noir'] .gd-card, html[data-theme='noir'] .ars-panel { background: #fdfbf7; border-color: rgba(28, 25, 23, 0.25); box-shadow: none; }
+html[data-theme='noir'] .gd-card:hover { transform: none; background: #fff; border-color: var(--red); }
+html[data-theme='noir'] .ars-panel.on { border-color: var(--red); box-shadow: inset 0 0 60px rgba(154, 43, 43, 0.08); }
+html[data-theme='noir'] .ap-idx { -webkit-text-stroke: 1px rgba(154, 43, 43, 0.55); }
+html[data-theme='noir'] .ars-panel li, html[data-theme='noir'] .hi-log, html[data-theme='noir'] .jr-where { color: #4a443f; }
+html[data-theme='noir'] .ms-media img, html[data-theme='noir'] .jr-img img { filter: sepia(0.22) contrast(1.05); }
+html[data-theme='noir'] .ms-media::after { background: linear-gradient(90deg, transparent 55%, #fdfbf7); }
+html[data-theme='noir'] .ms-media { background: #eae4da; }
+html[data-theme='noir'] .jr-img { background: #eae4da; }
+html[data-theme='noir'] .ms-big { -webkit-text-stroke: 1.5px rgba(28, 25, 23, 0.55); }
+html[data-theme='noir'] .ms-stamp { color: #1c1917; background: transparent; border-color: var(--red); }
+html[data-theme='noir'] .ms-tag { color: var(--red); }
+html[data-theme='noir'] .jr-year { -webkit-text-stroke: 1px #1c1917; }
+html[data-theme='noir'] .flight-card b { -webkit-text-stroke: 2px #1c1917; color: rgba(154, 43, 43, 0.22); }
+html[data-theme='noir'] .flight-card b { text-shadow: none; }
+html[data-theme='noir'] .mq-row.outline b { -webkit-text-stroke: 1px rgba(28, 25, 23, 0.5); }
+html[data-theme='noir'] .ab-tags span { background: transparent; }
+html[data-theme='noir'] .d-bg { stroke: rgba(28, 25, 23, 0.2); }
+html[data-theme='noir'] .d-tick { stroke: rgba(28, 25, 23, 0.3); }
+html[data-theme='noir'] .hero-rail, html[data-theme='noir'] .cue-track { background: rgba(28, 25, 23, 0.2); }
+html[data-theme='noir'] .nav-chapters { background: rgba(245, 241, 234, 0.85); border-color: rgba(28, 25, 23, 0.3); }
+html[data-theme='noir'] .intro-half { background: #f5f1ea; }
+html[data-theme='noir'] .intro-line { background: rgba(28, 25, 23, 0.15); }
+html[data-theme='noir'] .nav-overlay, html[data-theme='noir'] .resume-toast, html[data-theme='noir'] .vp { background: rgba(245, 241, 234, 0.96); }
+html[data-theme='noir'] .nav-overlay, html[data-theme='noir'] .resume-toast, html[data-theme='noir'] .vp-card { border-color: rgba(28, 25, 23, 0.3); }
+html[data-theme='noir'] .nav-overlay button { color: #6b625a; }
+html[data-theme='noir'] .nav-overlay button.on, html[data-theme='noir'] .nav-overlay button:hover { color: #1c1917; }
+html[data-theme='noir'] .vp-card { background: #fdfbf7; }
+html[data-theme='noir'] .vp-card b { color: var(--vc); }
+html[data-theme='noir'] .vp-card span { color: #6b625a; }
+html[data-theme='noir'] .lb { background: #1c1917; }
+html[data-theme='noir'] .subs p.sfx { color: #571717; }
+html[data-theme='noir'] .fin-glow { background: radial-gradient(50% 50% at 50% 50%, rgba(154, 43, 43, 0.1), transparent 70%); }
