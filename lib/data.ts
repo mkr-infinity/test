@@ -11,6 +11,7 @@ export const PROFILE = {
   email: 'mohammadkaifraja2@gmail.com',
   github: 'https://github.com/mkr-infinity',
   linkedin: 'https://t.me/mkr_infinity',
+  instagram: 'https://www.instagram.com/mkr_infinity',
   resume: 'https://github.com/mkr-infinity?tab=repositories',
 };
 
