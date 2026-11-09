@@ -18,7 +18,8 @@ A cinematic, scroll-driven portfolio that plays like an anime film. Scroll to pl
 - ▶️ **Continue watching** — scroll progress persists per visitor; they can resume like a streaming app
 - 📉 **Data-saver mode** — honors `Save-Data`/2G by loading fewer frames at low concurrency
 - 🥚 **Easter eggs** — styled console message, ⏸ tab title when the visitor switches away
-- 📱 **Fully responsive** — hamburger chapters menu on mobile, tuned down to 320px
+- 📱 **Fully responsive** — hamburger chapters menu on mobile, tuned down to 320px, landscape phones, `≥44px` touch targets
+- 🪶 **Lightweight on low-end devices** — only the font weights actually used, `Save-Data`/2G skips WebGL fog and loads fewer frames, static fog under `prefers-reduced-motion`
 - ♿ **Accessible** — focus-visible styles, focus trap + inert menu, skip link, `aria-current`, `prefers-reduced-motion`, touch-safe cursor
 - 🔍 **SEO-ready** — metadata, OpenGraph/Twitter cards with a designed banner, JSON-LD, robots.txt + sitemap, themed 404, PWA manifest
 - 🛠 **Manual-only CI** — a `workflow_dispatch` quality workflow (typecheck + build); nothing runs on push
